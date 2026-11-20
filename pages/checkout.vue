@@ -164,6 +164,163 @@ const dataURLtoBlob = (dataurl: string) => {
   return new Blob([u8arr], { type: mime })
 }
 
+// ==========================================
+// Phase 13: COD 4-Digit OTP Verification State & Logic
+// ==========================================
+const otpChannel = ref<'whatsapp' | 'sms'>('whatsapp')
+const otpSent = ref(false)
+const otpSending = ref(false)
+const otpVerifying = ref(false)
+const otpDigits = reactive(['', '', '', ''])
+const otpCooldown = ref(0)
+const otpError = ref('')
+const otpSuccessMsg = ref('')
+const isPhoneVerified = ref(false)
+const otpVerificationToken = ref('')
+const verifiedPhone = ref('')
+const otpInputRefs = ref<HTMLInputElement[]>([])
+let cooldownTimer: any = null
+
+const startCooldown = (seconds = 60) => {
+  otpCooldown.value = seconds
+  clearInterval(cooldownTimer)
+  cooldownTimer = setInterval(() => {
+    if (otpCooldown.value > 0) {
+      otpCooldown.value--
+    } else {
+      clearInterval(cooldownTimer)
+    }
+  }, 1000)
+}
+
+watch(() => customerForm.customer_phone, (newVal) => {
+  if (isPhoneVerified.value && newVal.trim() !== verifiedPhone.value) {
+    isPhoneVerified.value = false
+    otpVerificationToken.value = ''
+    otpSent.value = false
+    otpDigits[0] = ''
+    otpDigits[1] = ''
+    otpDigits[2] = ''
+    otpDigits[3] = ''
+    otpSuccessMsg.value = ''
+    otpError.value = 'Phone number changed. Please re-verify for COD.'
+  }
+})
+
+onUnmounted(() => {
+  if (cooldownTimer) clearInterval(cooldownTimer)
+})
+
+const handleDigitInput = (index: number, event: Event) => {
+  const input = event.target as HTMLInputElement
+  const val = input.value.replace(/[^0-9]/g, '')
+  otpDigits[index] = val ? val.slice(-1) : ''
+
+  if (val && index < 3) {
+    nextTick(() => {
+      otpInputRefs.value[index + 1]?.focus()
+    })
+  }
+
+  if (index === 3 && otpDigits.every(d => d !== '')) {
+    handleVerifyOtp()
+  }
+}
+
+const handleDigitKeydown = (index: number, event: KeyboardEvent) => {
+  if (event.key === 'Backspace' && !otpDigits[index] && index > 0) {
+    otpInputRefs.value[index - 1]?.focus()
+  }
+}
+
+const handleDigitPaste = (event: ClipboardEvent) => {
+  event.preventDefault()
+  const pasted = event.clipboardData?.getData('text') || ''
+  const digits = pasted.replace(/[^0-9]/g, '').slice(0, 4).split('')
+  digits.forEach((d, i) => {
+    otpDigits[i] = d
+  })
+  if (digits.length === 4) {
+    otpInputRefs.value[3]?.focus()
+    handleVerifyOtp()
+  } else if (digits.length > 0) {
+    otpInputRefs.value[Math.min(digits.length, 3)]?.focus()
+  }
+}
+
+const handleSendOtp = async () => {
+  if (!customerForm.customer_phone.trim()) {
+    otpError.value = 'Please enter your mobile phone number first.'
+    return
+  }
+
+  otpError.value = ''
+  otpSuccessMsg.value = ''
+  otpSending.value = true
+
+  try {
+    const res = await $fetch<any>(`${apiBase}/checkout/send-otp`, {
+      method: 'POST',
+      body: {
+        phone: customerForm.customer_phone.trim(),
+        channel: otpChannel.value,
+      },
+    })
+
+    if (res.success) {
+      otpSent.value = true
+      startCooldown(res.cooldown_seconds || 60)
+      otpSuccessMsg.value = res.message || `4-digit OTP sent to ${res.phone} via ${otpChannel.value}.`
+
+      if (res.debug_code) {
+        const chars = String(res.debug_code).split('')
+        chars.forEach((c, i) => { otpDigits[i] = c })
+      }
+
+      nextTick(() => {
+        otpInputRefs.value[0]?.focus()
+      })
+    }
+  } catch (err: any) {
+    otpError.value = err.data?.message || err.data?.errors?.phone?.[0] || 'Failed to dispatch verification code.'
+  } finally {
+    otpSending.value = false
+  }
+}
+
+const handleVerifyOtp = async () => {
+  const code = otpDigits.join('')
+  if (code.length < 4) {
+    otpError.value = 'Please enter all 4 digits of the verification code.'
+    return
+  }
+
+  otpError.value = ''
+  otpVerifying.value = true
+
+  try {
+    const res = await $fetch<any>(`${apiBase}/checkout/verify-otp`, {
+      method: 'POST',
+      body: {
+        phone: customerForm.customer_phone.trim(),
+        code,
+      },
+    })
+
+    if (res.success) {
+      isPhoneVerified.value = true
+      otpVerificationToken.value = res.verification_token
+      verifiedPhone.value = customerForm.customer_phone.trim()
+      otpSuccessMsg.value = '✓ Mobile number successfully verified.'
+      otpError.value = ''
+    }
+  } catch (err: any) {
+    otpError.value = err.data?.message || err.data?.errors?.code?.[0] || 'Invalid verification code.'
+  } finally {
+    otpVerifying.value = false
+  }
+}
+
 // Submit Order to backend API
 const handleSubmitOrder = async () => {
   if (cart.items.length === 0) return
@@ -171,6 +328,12 @@ const handleSubmitOrder = async () => {
   // Basic validation
   if (!customerForm.customer_name.trim() || !customerForm.customer_phone.trim() || !customerForm.shipping_address.trim()) {
     submitError.value = 'Please fill in all required customer details (Name, Phone & Address).'
+    return
+  }
+
+  // COD OTP Verification Check
+  if (customerForm.payment_method === 'cod' && !isPhoneVerified.value) {
+    submitError.value = 'Please verify your phone number with the 4-digit OTP before placing a Cash on Delivery order.'
     return
   }
 
@@ -199,6 +362,9 @@ const handleSubmitOrder = async () => {
     formData.append('shipping_address', customerForm.shipping_address.trim())
     formData.append('city', customerForm.city)
     formData.append('payment_method', customerForm.payment_method)
+    if (otpVerificationToken.value) {
+      formData.append('verification_token', otpVerificationToken.value)
+    }
     if (customerForm.notes.trim()) {
       formData.append('notes', customerForm.notes.trim())
     }
@@ -335,6 +501,22 @@ const generateWhatsAppConfirmationLink = () => {
           </div>
         </div>
 
+        <!-- WhatsApp Bot Confirmation Notice for COD -->
+        <div
+          v-if="placedOrder.payment_method === 'cod'"
+          class="bg-brand-cream/90 border border-brand-gold/60 p-5 mb-8 text-left text-xs text-brand-charcoal space-y-2"
+        >
+          <div class="flex items-center space-x-2 text-brand-charcoal font-semibold uppercase tracking-luxury text-[11px]">
+            <svg class="w-4 h-4 text-green-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10c0 4.418-3.582 8-8 8a8.956 8.956 0 01-4.996-1.505l-3.297.868.885-3.218A8.961 8.961 0 012 10c0-4.418 3.582-8 8-8s8 3.582 8 8zm-8 4a1 1 0 100-2 1 1 0 000 2zm1-9a1 1 0 00-2 0v5a1 1 0 002 0V5z" clip-rule="evenodd" />
+            </svg>
+            <span>WhatsApp Bot Order Confirmation</span>
+          </div>
+          <p class="leading-relaxed text-brand-muted">
+            We have dispatched an automated WhatsApp confirmation message to <strong class="text-brand-charcoal font-semibold">{{ placedOrder.customer_phone }}</strong>. Please reply with <strong class="text-brand-charcoal font-semibold">1 to confirm</strong> or <strong class="text-brand-charcoal font-semibold">2 to cancel</strong> before workshop dispatch.
+          </p>
+        </div>
+
         <!-- 50% Advance Notice if Tailoring -->
         <div
           v-if="placedOrder.stitching_requests?.length > 0"
@@ -429,9 +611,26 @@ const generateWhatsAppConfirmationLink = () => {
               </div>
 
               <div>
-                <label class="text-[10px] uppercase tracking-wider text-brand-charcoal font-medium block mb-1">
-                  Phone Number (WhatsApp) *
-                </label>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-[10px] uppercase tracking-wider text-brand-charcoal font-medium block">
+                    Phone Number (WhatsApp) *
+                  </label>
+                  <span
+                    v-if="customerForm.payment_method === 'cod' && isPhoneVerified"
+                    class="text-[9px] text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 uppercase font-medium flex items-center space-x-1"
+                  >
+                    <svg class="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    <span>Verified for COD</span>
+                  </span>
+                  <span
+                    v-else-if="customerForm.payment_method === 'cod'"
+                    class="text-[9px] text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 uppercase font-medium"
+                  >
+                    OTP Required for COD
+                  </span>
+                </div>
                 <input
                   v-model="customerForm.customer_phone"
                   type="tel"
@@ -511,25 +710,152 @@ const generateWhatsAppConfirmationLink = () => {
 
             <div class="space-y-3">
               <!-- COD -->
-              <label
-                class="border p-4 flex items-start space-x-3 cursor-pointer transition-colors block"
-                :class="[customerForm.payment_method === 'cod' ? 'border-brand-charcoal bg-brand-cream/60' : 'border-brand-border bg-white']"
-              >
-                <input
-                  v-model="customerForm.payment_method"
-                  type="radio"
-                  value="cod"
-                  class="mt-1 accent-brand-charcoal"
+              <div>
+                <label
+                  class="border p-4 flex items-start space-x-3 cursor-pointer transition-colors block"
+                  :class="[customerForm.payment_method === 'cod' ? 'border-brand-charcoal bg-brand-cream/60' : 'border-brand-border bg-white']"
                 >
-                <div class="flex-1">
-                  <span class="text-xs font-bold uppercase tracking-luxury text-brand-charcoal block">
-                    Cash on Delivery (COD)
-                  </span>
-                  <span class="text-xs text-brand-muted">
-                    Pay cash upon delivery at your doorstep across Pakistan.
-                  </span>
+                  <input
+                    v-model="customerForm.payment_method"
+                    type="radio"
+                    value="cod"
+                    class="mt-1 accent-brand-charcoal"
+                  >
+                  <div class="flex-1">
+                    <span class="text-xs font-bold uppercase tracking-luxury text-brand-charcoal block">
+                      Cash on Delivery (COD)
+                    </span>
+                    <span class="text-xs text-brand-muted">
+                      Pay cash upon delivery at your doorstep across Pakistan.
+                    </span>
+                  </div>
+                </label>
+
+                <!-- COD 4-Digit OTP Verification Box -->
+                <div
+                  v-if="customerForm.payment_method === 'cod'"
+                  class="mt-2 p-4 bg-brand-cream/90 border border-brand-border/80 space-y-4"
+                >
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-brand-border/60 pb-3">
+                    <div>
+                      <h4 class="font-serif text-xs font-bold uppercase tracking-luxury text-brand-charcoal flex items-center space-x-1.5">
+                        <svg class="w-4 h-4 text-brand-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        <span>4-Digit Phone Verification</span>
+                      </h4>
+                      <p class="text-[11px] text-brand-muted mt-0.5">
+                        To protect against fake orders, verify your mobile number before placing COD.
+                      </p>
+                    </div>
+
+                    <!-- Verified Badge -->
+                    <div
+                      v-if="isPhoneVerified"
+                      class="inline-flex items-center space-x-1.5 text-xs text-green-700 bg-green-50 border border-green-300 px-3 py-1 font-medium shrink-0"
+                    >
+                      <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                      </svg>
+                      <span>Phone Verified</span>
+                    </div>
+                  </div>
+
+                  <!-- Verification Flow if not yet verified -->
+                  <div v-if="!isPhoneVerified" class="space-y-3">
+                    <!-- Channel Selector & Send Button -->
+                    <div class="flex flex-wrap items-center gap-2">
+                      <!-- WhatsApp / SMS Toggle -->
+                      <div class="inline-flex border border-brand-border bg-white p-0.5 text-[10px] uppercase font-medium">
+                        <button
+                          type="button"
+                          :class="[otpChannel === 'whatsapp' ? 'bg-brand-charcoal text-white' : 'text-brand-muted hover:text-brand-charcoal']"
+                          class="px-3 py-1.5 transition-colors"
+                          @click="otpChannel = 'whatsapp'"
+                        >
+                          WhatsApp (Instant)
+                        </button>
+                        <button
+                          type="button"
+                          :class="[otpChannel === 'sms' ? 'bg-brand-charcoal text-white' : 'text-brand-muted hover:text-brand-charcoal']"
+                          class="px-3 py-1.5 transition-colors"
+                          @click="otpChannel = 'sms'"
+                        >
+                          SMS
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        :disabled="otpSending || otpCooldown > 0 || !customerForm.customer_phone.trim()"
+                        class="px-4 py-2 bg-brand-charcoal text-white text-[11px] uppercase tracking-luxury hover:bg-brand-gold disabled:opacity-50 transition-colors font-medium shrink-0"
+                        @click="handleSendOtp"
+                      >
+                        <span v-if="otpSending">Sending...</span>
+                        <span v-else-if="otpCooldown > 0">Resend in {{ otpCooldown }}s</span>
+                        <span v-else-if="otpSent">Resend Code</span>
+                        <span v-else>Send 4-Digit Code</span>
+                      </button>
+
+                      <span v-if="!customerForm.customer_phone.trim()" class="text-[10px] text-amber-700 italic">
+                        * Please fill in phone number in Section 1
+                      </span>
+                    </div>
+
+                    <!-- 4-Box Numeric OTP Input -->
+                    <div v-if="otpSent" class="pt-2 space-y-2">
+                      <label class="text-[10px] uppercase tracking-wider text-brand-charcoal font-medium block">
+                        Enter 4-Digit Code sent to {{ customerForm.customer_phone }}:
+                      </label>
+
+                      <div class="flex items-center space-x-2">
+                        <input
+                          v-for="(digit, idx) in otpDigits"
+                          :key="idx"
+                          :ref="el => { if (el) otpInputRefs[idx] = el as HTMLInputElement }"
+                          v-model="otpDigits[idx]"
+                          type="text"
+                          inputmode="numeric"
+                          pattern="[0-9]*"
+                          maxlength="1"
+                          class="w-12 h-12 text-center text-lg font-serif font-bold text-brand-charcoal bg-white border border-brand-border focus:border-brand-gold focus:outline-none transition-colors"
+                          @input="handleDigitInput(idx, $event)"
+                          @keydown="handleDigitKeydown(idx, $event)"
+                          @paste="handleDigitPaste($event)"
+                        >
+
+                        <button
+                          type="button"
+                          :disabled="otpVerifying || otpDigits.some(d => !d)"
+                          class="px-5 h-12 bg-brand-gold text-brand-charcoal hover:bg-brand-charcoal hover:text-white text-xs uppercase tracking-luxury font-medium transition-colors disabled:opacity-50"
+                          @click="handleVerifyOtp"
+                        >
+                          <span v-if="otpVerifying">Verifying...</span>
+                          <span v-else>Verify Code</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Feedback Alert Messages -->
+                    <div v-if="otpError" class="text-xs text-red-600 bg-red-50 p-2.5 border border-red-200">
+                      {{ otpError }}
+                    </div>
+                    <div v-if="otpSuccessMsg && !isPhoneVerified" class="text-xs text-brand-charcoal bg-white p-2.5 border border-brand-border">
+                      {{ otpSuccessMsg }}
+                    </div>
+                  </div>
+
+                  <!-- Verified Status Info -->
+                  <div v-else class="text-xs text-brand-muted space-y-1">
+                    <p>
+                      Phone <strong class="text-brand-charcoal">{{ verifiedPhone }}</strong> is successfully verified.
+                    </p>
+                    <p class="text-[11px] text-brand-muted/80">
+                      After checkout, our WhatsApp bot will dispatch an order confirmation prompt. Simply reply <strong>1 to confirm</strong> or <strong>2 to cancel</strong>.
+                    </p>
+                  </div>
                 </div>
-              </label>
+              </div>
 
               <!-- Bank Transfer -->
               <label
@@ -747,11 +1073,13 @@ const generateWhatsAppConfirmationLink = () => {
 
             <!-- Submit Button -->
             <button
-              :disabled="isSubmitting"
+              :disabled="isSubmitting || (customerForm.payment_method === 'cod' && !isPhoneVerified)"
               class="w-full py-4 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors duration-200 disabled:opacity-50 shadow-md"
               @click="handleSubmitOrder"
             >
               <span v-if="isSubmitting">Placing Order...</span>
+              <span v-else-if="customerForm.payment_method === 'cod' && !isPhoneVerified">Verify Phone to Place COD Order</span>
+              <span v-else-if="customerForm.payment_method === 'cod'">Place Cash on Delivery Order →</span>
               <span v-else>Place Order Now →</span>
             </button>
           </div>
