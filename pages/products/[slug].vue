@@ -187,6 +187,41 @@ const finalUnitPrice = computed(() => {
 
 const formatPrice = (val: number) => 'Rs. ' + Number(val).toLocaleString('en-PK')
 
+// Complete the Look Add-ons State (Phase 14)
+const selectedAddonSizes = reactive<Record<number, string>>({})
+const addedAddonIds = ref<Set<number>>(new Set())
+
+watch(
+  product,
+  (p) => {
+    if (p?.addons?.length) {
+      for (const addon of p.addons) {
+        if (addon.sizes?.length && !selectedAddonSizes[addon.id]) {
+          selectedAddonSizes[addon.id] = addon.sizes[0]
+        }
+      }
+    }
+  },
+  { immediate: true }
+)
+
+const handleAddAddon = (addon: any) => {
+  const chosenSize = selectedAddonSizes[addon.id] || addon.sizes?.[0] || 'One Size'
+  cart.addAddon({
+    addonId: addon.id,
+    productId: product.value.id,
+    title: addon.title,
+    price: addon.price,
+    image: addon.image_url,
+    size: chosenSize,
+  })
+
+  addedAddonIds.value.add(addon.id)
+  setTimeout(() => {
+    addedAddonIds.value.delete(addon.id)
+  }, 2500)
+}
+
 // Available sizes for the product
 const standardSizes = ['XS', 'S', 'M', 'L', 'XL']
 
@@ -1012,6 +1047,91 @@ const handleWhatsAppOrder = () => {
                 </svg>
                 <span>{{ isInWishlist ? 'Saved in Wishlist' : 'Add to Wishlist' }}</span>
               </button>
+            </div>
+
+            <!-- "Complete the Look" Cross-Sell Add-Ons (Phase 14) -->
+            <div
+              v-if="product.addons && product.addons.length > 0"
+              class="border border-brand-gold/40 bg-brand-cream/60 p-5 space-y-4 my-6"
+            >
+              <div class="flex items-center justify-between border-b border-brand-border/60 pb-2.5">
+                <div>
+                  <span class="text-[9px] uppercase tracking-[0.25em] text-brand-gold font-semibold block">
+                    Atelier Styling Pairings
+                  </span>
+                  <h3 class="font-serif text-sm font-bold uppercase tracking-luxury text-brand-charcoal">
+                    Complete the Look
+                  </h3>
+                </div>
+                <span class="text-[10px] text-brand-muted uppercase tracking-wider font-medium">
+                  1-Click Add
+                </span>
+              </div>
+
+              <div class="divide-y divide-brand-border/60">
+                <div
+                  v-for="addon in product.addons"
+                  :key="addon.id"
+                  class="py-3 flex items-center space-x-3 first:pt-0 last:pb-0"
+                >
+                  <!-- Thumbnail -->
+                  <div class="w-14 h-16 bg-white border border-brand-border overflow-hidden shrink-0">
+                    <img
+                      v-if="addon.image_url"
+                      :src="addon.image_url"
+                      :alt="addon.title"
+                      class="w-full h-full object-cover"
+                    >
+                    <div v-else class="w-full h-full flex items-center justify-center text-[10px] text-brand-muted">
+                      Add-on
+                    </div>
+                  </div>
+
+                  <!-- Info & Size Selector -->
+                  <div class="flex-1 min-w-0 text-xs">
+                    <h4 class="font-serif font-bold text-brand-charcoal truncate">
+                      {{ addon.title }}
+                    </h4>
+                    <div class="text-[11px] text-brand-gold font-medium mt-0.5">
+                      {{ formatPrice(addon.price) }}
+                    </div>
+
+                    <!-- Size options if footwear / khussa -->
+                    <div v-if="addon.sizes && addon.sizes.length > 0" class="flex items-center space-x-1 mt-1.5 flex-wrap gap-y-1">
+                      <span class="text-[9px] uppercase text-brand-muted mr-1">Size:</span>
+                      <button
+                        v-for="sz in addon.sizes"
+                        :key="sz"
+                        type="button"
+                        class="px-1.5 py-0.5 text-[10px] border transition-colors"
+                        :class="[
+                          selectedAddonSizes[addon.id] === sz
+                            ? 'border-brand-charcoal bg-brand-charcoal text-white font-medium'
+                            : 'border-brand-border bg-white text-brand-charcoal hover:border-brand-gold'
+                        ]"
+                        @click="selectedAddonSizes[addon.id] = sz"
+                      >
+                        {{ sz }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- 1-Click Add Button -->
+                  <button
+                    type="button"
+                    class="shrink-0 px-3.5 py-2 text-[10px] uppercase tracking-luxury font-medium transition-colors"
+                    :class="[
+                      addedAddonIds.has(addon.id)
+                        ? 'bg-green-700 text-white'
+                        : 'bg-brand-charcoal text-white hover:bg-brand-gold'
+                    ]"
+                    @click="handleAddAddon(addon)"
+                  >
+                    <span v-if="addedAddonIds.has(addon.id)">✓ Added</span>
+                    <span v-else>+ Add</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             <!-- Collapsible Luxury Accordions -->

@@ -27,6 +27,10 @@ export interface CartItem {
   productId?: number
   variantId?: number
   serviceId?: number
+  addonId?: number
+  isAddon?: boolean
+  parentProductId?: number
+  selectedSize?: string
   name: string
   slug?: string
   size?: string
@@ -195,6 +199,48 @@ export const useCartStore = defineStore('cart', {
 
       this.persist()
       this.openCart()
+    },
+
+    addAddon(addon: {
+      addonId: number
+      productId: number
+      title: string
+      price: number
+      image?: string
+      size?: string
+    }) {
+      const selectedSize = addon.size || 'One Size'
+      const existing = this.items.find(
+        item => item.addonId === addon.addonId && item.size === selectedSize
+      )
+
+      if (existing) {
+        existing.quantity += 1
+      } else {
+        const lineId = `addon-${addon.addonId}-${selectedSize}-${Date.now()}`
+        this.items.push({
+          id: lineId,
+          type: 'product',
+          productId: addon.productId,
+          addonId: addon.addonId,
+          isAddon: true,
+          parentProductId: addon.productId,
+          selectedSize: addon.size,
+          name: addon.title,
+          size: selectedSize,
+          price: addon.price,
+          image: addon.image,
+          quantity: 1,
+        })
+      }
+
+      this.persist()
+      this.openCart()
+    },
+
+    setCartItems(newItems: CartItem[]) {
+      this.items = newItems
+      this.persist()
     },
 
     updateQuantity(id: string, delta: number) {

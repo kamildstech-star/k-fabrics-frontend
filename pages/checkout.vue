@@ -2,14 +2,19 @@
 import { useCartStore } from '~/stores/cart'
 import { useAuthStore } from '~/stores/auth'
 import { useTracking } from '~/composables/useTracking'
+import { useAbandonedCart } from '~/composables/useAbandonedCart'
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
 
 const router = useRouter()
+const route = useRoute()
 const cart = useCartStore()
 const auth = useAuthStore()
 const { trackInitiateCheckout, trackPurchase } = useTracking()
+const { sessionToken, isSyncing, isOptedOut, getOrCreateSessionToken, syncCart, recoverCart, optOut } = useAbandonedCart()
+
+const recoveryBanner = ref('')
 
 useSeoMeta({
   title: 'Secure Checkout | K. Fabrics Pakistan',
@@ -19,6 +24,26 @@ useSeoMeta({
 onMounted(async () => {
   cart.initCart()
   await auth.initAuth()
+  getOrCreateSessionToken()
+
+  // 1. Abandoned Cart Recovery via ?recover=<session_token>
+  const recoverToken = route.query.recover as string
+  if (recoverToken) {
+    const recovered = await recoverCart(recoverToken)
+    if (recovered) {
+      if (recovered.customer_name) customerForm.customer_name = recovered.customer_name
+      if (recovered.customer_phone) customerForm.customer_phone = recovered.customer_phone
+      if (recovered.customer_email) customerForm.customer_email = recovered.customer_email
+      recoveryBanner.value = 'Welcome back! We restored your saved bag and active items.'
+    }
+  }
+
+  // 2. Pre-fill & Auto-apply coupon via ?coupon=... (or COMPLETE5 if recovery link)
+  const couponParam = (route.query.coupon as string) || (recoverToken ? 'COMPLETE5' : '')
+  if (couponParam) {
+    couponCodeInput.value = couponParam.toUpperCase()
+    await handleApplyCoupon()
+  }
 
   if (cart.items.length > 0) {
     trackInitiateCheckout(cart.items, cart.total)
@@ -321,6 +346,24 @@ const handleVerifyOtp = async () => {
   }
 }
 
+// Auto-sync cart to backend for 2-hour abandoned cart recovery (Phase 14)
+watch(
+  [
+    () => customerForm.customer_name,
+    () => customerForm.customer_phone,
+    () => customerForm.customer_email,
+    () => cart.items,
+  ],
+  () => {
+    syncCart({
+      name: customerForm.customer_name,
+      phone: customerForm.customer_phone,
+      email: customerForm.customer_email,
+    })
+  },
+  { deep: true }
+)
+
 // Submit Order to backend API
 const handleSubmitOrder = async () => {
   if (cart.items.length === 0) return
@@ -341,12 +384,16 @@ const handleSubmitOrder = async () => {
   isSubmitting.value = true
 
   try {
-    // Separate ready-to-wear items and standalone stitching
+    // Separate ready-to-wear items and standalone stitching (including addons)
     const readyToWearItems = cart.items
-      .filter(item => item.type === 'product' && item.productId && item.variantId)
+      .filter(item => item.type === 'product' && (item.variantId || item.addonId))
       .map(item => ({
         product_id: item.productId,
-        variant_id: item.variantId,
+        variant_id: item.variantId || null,
+        addon_id: item.addonId || null,
+        is_addon: Boolean(item.isAddon),
+        parent_product_id: item.parentProductId || null,
+        selected_size: item.selectedSize || item.size || null,
         quantity: item.quantity,
         custom_fitting: item.customFitting || null,
       }))
@@ -362,6 +409,9 @@ const handleSubmitOrder = async () => {
     formData.append('shipping_address', customerForm.shipping_address.trim())
     formData.append('city', customerForm.city)
     formData.append('payment_method', customerForm.payment_method)
+    if (sessionToken.value) {
+      formData.append('session_token', sessionToken.value)
+    }
     if (otpVerificationToken.value) {
       formData.append('verification_token', otpVerificationToken.value)
     }
@@ -467,6 +517,29 @@ const generateWhatsAppConfirmationLink = () => {
         <span>/</span>
         <span class="text-brand-charcoal font-semibold">Checkout</span>
       </nav>
+
+      <!-- Recovery Banner (Phase 14) -->
+      <div
+        v-if="recoveryBanner"
+        class="mb-6 p-4 bg-brand-gold/15 border border-brand-gold text-brand-charcoal text-xs flex items-center justify-between"
+      >
+        <div class="flex items-center space-x-2">
+          <svg class="w-4 h-4 text-brand-gold shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+          </svg>
+          <span class="font-medium">{{ recoveryBanner }}</span>
+          <span v-if="appliedCoupon?.code === 'COMPLETE5'" class="text-brand-gold font-semibold ml-2">
+            (5% discount applied!)
+          </span>
+        </div>
+        <button
+          type="button"
+          class="text-brand-muted hover:text-brand-charcoal text-sm ml-4 font-bold"
+          @click="recoveryBanner = ''"
+        >
+          ✕
+        </button>
+      </div>
 
       <!-- ================= SUCCESS CONFIRMATION SCREEN ================= -->
       <div
@@ -651,6 +724,19 @@ const generateWhatsAppConfirmationLink = () => {
                 placeholder="ayesha@example.com"
                 class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
               >
+            </div>
+
+            <!-- Cart Recovery Notification Opt-Out -->
+            <div class="pt-1 flex items-center justify-between text-[11px] text-brand-muted">
+              <label class="inline-flex items-center space-x-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  :checked="isOptedOut"
+                  class="accent-brand-charcoal rounded text-brand-gold"
+                  @change="optOut"
+                >
+                <span>Opt out of automated WhatsApp cart recovery reminders</span>
+              </label>
             </div>
           </div>
 
