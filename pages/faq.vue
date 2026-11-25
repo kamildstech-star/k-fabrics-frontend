@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { whatsapp, emailHref } = useStoreContact()
+const chatUrl = computed(() => whatsapp('Hello K. Fabrics, I have a question about your collection.'))
 useSeoMeta({
   title: 'Frequently Asked Questions & Support | K. Fabrics Pakistan',
   description: 'Everything you need to know about bespoke stitching, measurement profiles, Cash on Delivery, rider pickup, and exchange policies at K. Fabrics.',
@@ -54,7 +56,7 @@ const faqs: FaqItem[] = [
     id: 'orders-2',
     category: 'orders',
     question: 'How do I track my parcel once shipped?',
-    answer: 'As soon as your order leaves our fulfillment center, you will receive an SMS and email with your tracking number. You can enter your Order Number or phone number anytime on our /track-order page to view real-time courier checkpoints.',
+    answer: 'Enter your order number and the private tracking code shown at checkout on the Track Order page. Courier details will appear there once they are available.',
   },
 
   // Payments
@@ -62,13 +64,13 @@ const faqs: FaqItem[] = [
     id: 'payment-1',
     category: 'payment',
     question: 'Do you offer Cash on Delivery (COD)?',
-    answer: 'Yes, 100% Cash on Delivery is available for all standard Ready-to-Wear (Pret) orders up to Rs. 25,000 nationwide across Pakistan.',
+    answer: 'Available payment options are shown at checkout. Cash on Delivery orders are confirmed before dispatch.',
   },
   {
     id: 'payment-2',
     category: 'payment',
-    question: 'Why do custom tailored orders require a 50% advance payment?',
-    answer: 'Because bespoke tailored pieces are custom cut to individual body dimensions and cannot be resold, we require a 50% advance confirmation. The payment can be completed conveniently via JazzCash, EasyPaisa, or Bank Transfer. The remaining 50% balance is paid via Cash on Delivery at your doorstep.',
+    question: 'How do I pay the advance for custom tailoring?',
+    answer: 'Checkout shows the amount due in advance and the available payment options. The atelier starts cutting after payment is verified.',
   },
 
   // Exchanges
@@ -76,7 +78,7 @@ const faqs: FaqItem[] = [
     id: 'exchanges-1',
     category: 'exchanges',
     question: 'What is your exchange policy if a ready-to-wear size does not fit?',
-    answer: 'We provide a hassle-free 7-day size exchange window for unworn, unwashed Pret items with all tags and original luxury packaging intact. Contact our WhatsApp concierge to initiate an exchange pickup.',
+    answer: 'We provide a hassle-free 7-day size exchange window for unworn, unwashed Pret items with all tags and original luxury packaging intact. Use the support details for your order to ask about an exchange.',
   },
   {
     id: 'exchanges-2',
@@ -212,14 +214,16 @@ const toggleFaq = (id: string) => {
             Speak Directly with our Atelier Stylist
           </h3>
           <p class="text-xs text-brand-muted max-w-md font-light leading-relaxed">
-            Need guidance on measuring, neck styling, or fabric matching? Our personal concierge is ready to assist via WhatsApp.
+            Need guidance on measuring, neck styling, or fabric matching? Use a support option below when available.
           </p>
         </div>
 
-        <div class="flex flex-col sm:flex-row items-center gap-3 shrink-0">
+        <div v-if="chatUrl || emailHref" class="flex flex-col sm:flex-row items-center gap-3 shrink-0">
           <a
-            href="https://wa.me/923001234567?text=Hello%20K.%20Fabrics%2C%20I%20have%20a%20question%20about%20your%20collection."
+            v-if="chatUrl"
+            :href="chatUrl"
             target="_blank"
+            rel="noopener noreferrer"
             class="px-6 py-3.5 bg-[#25D366] text-white text-xs uppercase tracking-luxury font-medium hover:opacity-90 transition-opacity flex items-center space-x-2"
           >
             <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -228,7 +232,8 @@ const toggleFaq = (id: string) => {
             <span>WhatsApp Concierge</span>
           </a>
           <a
-            href="mailto:concierge@kfabrics.com"
+            v-if="emailHref"
+            :href="emailHref"
             class="px-6 py-3.5 bg-white border border-brand-border text-brand-charcoal text-xs uppercase tracking-luxury font-medium hover:border-brand-charcoal transition-colors"
           >
             Email Support

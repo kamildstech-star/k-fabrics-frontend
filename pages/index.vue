@@ -10,7 +10,8 @@ const { data: featuredData, pending: productsPending } = await useFetch<any>(`${
 })
 
 // Fetch active categories
-const { data: categoriesData } = await useFetch<any>(`${apiBase}/categories`, {
+type Category = { id: number, slug: string, name: string, image_url?: string | null }
+const { data: categoriesData } = await useFetch<{ data: Category[] }>(`${apiBase}/categories`, {
   lazy: false,
 })
 

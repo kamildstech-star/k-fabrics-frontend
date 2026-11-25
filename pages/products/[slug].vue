@@ -2,8 +2,8 @@
 import { useCartStore, type CustomFittingMeasurements } from '~/stores/cart'
 import { useWishlistStore } from '~/stores/wishlist'
 import { useAuthStore } from '~/stores/auth'
+import { convertMeasurements, hasNumericMeasurements, measurementPayload } from '~/utils/checkout'
 import { useRecentlyViewed } from '~/composables/useRecentlyViewed'
-import { useTracking } from '~/composables/useTracking'
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
@@ -15,21 +15,16 @@ const cart = useCartStore()
 const wishlist = useWishlistStore()
 const auth = useAuthStore()
 const { recordView } = useRecentlyViewed()
-const { trackViewContent, trackAddToCart } = useTracking()
+const { whatsapp } = useStoreContact()
 
 const savedProfiles = ref<any[]>([])
 const selectedSavedProfileId = ref<number | null>(null)
 
 onMounted(async () => {
   await auth.initAuth()
-  if (auth.token) {
+  if (auth.isAuthenticated) {
     try {
-      const res = await $fetch<any>(`${apiBase}/user/measurements`, {
-        headers: {
-          Authorization: `Bearer ${auth.token}`,
-          Accept: 'application/json',
-        },
-      })
+      const res = await auth.apiFetch<{ data: any[] }>('/user/measurements')
       savedProfiles.value = res.data || []
     } catch (e) {
       // ignore
@@ -66,7 +61,7 @@ const handleToggleWishlist = () => {
 
 // Fetch product data from API
 const { data: productResponse, pending, error } = await useFetch<any>(
-  `${apiBase}/products/${slug.value}`,
+  () => `${apiBase}/products/${encodeURIComponent(slug.value)}`,
   {
     lazy: false,
   }
@@ -107,8 +102,9 @@ const availableColors = computed(() => {
 })
 
 // Active size selection
-const selectedSize = ref<string>('S')
+const selectedSize = ref<string>('')
 const sizeError = ref(false)
+const selectionError = ref('')
 
 // Custom Fit toggle & measurement form state
 const isCustomFit = ref(false)
@@ -128,12 +124,10 @@ const measurements = reactive<CustomFittingMeasurements>({
 })
 
 // Sync measurement unit change
-watch(measurementUnit, (u) => {
-  measurements.unit = u
-})
+watch(measurementUnit, unit => convertMeasurements(measurements, unit), { flush: 'sync' })
 
 // Custom Fit Fee
-const CUSTOM_FIT_FEE = 300
+const customFitFee = computed(() => Number(product.value?.custom_fitting_fee ?? 0))
 
 // Accordion Open/Closed States
 const activeAccordions = reactive({
@@ -174,56 +168,21 @@ const sizeChart = computed(() => {
 // Price calculation
 const effectiveBasePrice = computed(() => {
   if (!product.value) return 0
-  return product.value.sale_price ?? product.value.base_price
+  return activeVariant.value?.price_override ?? product.value.sale_price ?? product.value.base_price
 })
 
 const finalUnitPrice = computed(() => {
   let price = effectiveBasePrice.value
   if (isCustomFit.value) {
-    price += CUSTOM_FIT_FEE
+    price += customFitFee.value
   }
   return price
 })
 
 const formatPrice = (val: number) => 'Rs. ' + Number(val).toLocaleString('en-PK')
 
-// Complete the Look Add-ons State (Phase 14)
-const selectedAddonSizes = reactive<Record<number, string>>({})
-const addedAddonIds = ref<Set<number>>(new Set())
-
-watch(
-  product,
-  (p) => {
-    if (p?.addons?.length) {
-      for (const addon of p.addons) {
-        if (addon.sizes?.length && !selectedAddonSizes[addon.id]) {
-          selectedAddonSizes[addon.id] = addon.sizes[0]
-        }
-      }
-    }
-  },
-  { immediate: true }
-)
-
-const handleAddAddon = (addon: any) => {
-  const chosenSize = selectedAddonSizes[addon.id] || addon.sizes?.[0] || 'One Size'
-  cart.addAddon({
-    addonId: addon.id,
-    productId: product.value.id,
-    title: addon.title,
-    price: addon.price,
-    image: addon.image_url,
-    size: chosenSize,
-  })
-
-  addedAddonIds.value.add(addon.id)
-  setTimeout(() => {
-    addedAddonIds.value.delete(addon.id)
-  }, 2500)
-}
-
 // Available sizes for the product
-const standardSizes = ['XS', 'S', 'M', 'L', 'XL']
+const standardSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
 
 const getVariantForSize = (size: string) => {
   if (!product.value?.variants) return null
@@ -239,21 +198,23 @@ const isSizeAvailable = (size: string) => {
   return Boolean(variant && variant.stock_quantity > 0)
 }
 
-// Find matched variant to add
-const activeVariant = computed(() => {
-  if (!product.value?.variants) return null
-
-  // If custom fit is selected, check if a dedicated Custom variant exists
-  if (isCustomFit.value) {
-    const customVar = product.value.variants.find((v: any) => v.size === 'Custom' && v.is_active)
-    if (customVar) return customVar
-  }
-
-  // Otherwise, match the selected size
-  return getVariantForSize(selectedSize.value) || product.value.variants[0]
+// Custom measurements are only offered for an active Custom SKU.
+const customVariant = computed(() => {
+  const variants = product.value?.variants?.filter((variant: { size: string; is_active: boolean }) => variant.size === 'Custom' && variant.is_active) || []
+  if (!selectedColor.value) return variants[0] || null
+  return variants.find((variant: { color?: string | null }) => variant.color === selectedColor.value)
+    ?? variants.find((variant: { color?: string | null }) => !variant.color)
+    ?? null
 })
+const activeVariant = computed(() => isCustomFit.value ? customVariant.value : getVariantForSize(selectedSize.value))
+watch(customVariant, variant => { if (!variant) isCustomFit.value = false })
 
 // Out of stock evaluation for selected size
+watch([product, selectedColor], () => {
+  if (!product.value || isSizeAvailable(selectedSize.value)) return
+  selectedSize.value = standardSizes.find(isSizeAvailable) || ''
+}, { immediate: true })
+
 const isOutOfStock = computed(() => {
   if (isCustomFit.value) return false
   if (!activeVariant.value) return false
@@ -271,7 +232,7 @@ const handleStockAlert = async () => {
   stockAlertLoading.value = true
   stockAlertError.value = ''
   try {
-    await $fetch(`${apiBase}/stock-alerts`, {
+    await auth.apiFetch('/stock-alerts', {
       method: 'POST',
       body: {
         product_variant_id: activeVariant.value.id,
@@ -295,11 +256,11 @@ const scrollToStockAlert = () => {
 }
 
 // Reviews & Ratings
-const { data: reviewsResponse, refresh: refreshReviews } = await useFetch<any>(
+const { data: reviewsResponse } = await useFetch<any>(
   () => `${apiBase}/products/${slug.value}/reviews`
 )
 const reviews = computed(() => reviewsResponse.value?.data || [])
-const reviewsMeta = computed(() => reviewsResponse.value?.meta || { average_rating: 5, total_reviews: 0, distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } })
+const reviewsMeta = computed(() => reviewsResponse.value?.meta || { average_rating: null, total_reviews: 0, distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } })
 
 // Related Products
 const { data: relatedResponse } = await useFetch<any>(
@@ -325,14 +286,7 @@ watch(
         variants: p.variants,
       })
 
-      // Fire Pixel
-      trackViewContent({
-        id: p.id,
-        name: p.name,
-        price: p.sale_price ?? p.base_price,
-        category: p.category?.name,
-        fabric_type: p.fabric_type,
-      })
+
     }
   },
   { immediate: true }
@@ -357,12 +311,45 @@ useSeoMeta({
 const writeReviewOpen = ref(false)
 const reviewFilter = ref<'all' | 'photos' | number>('all')
 const activePhotoModal = ref<string | null>(null)
+const dialogContent = ref<HTMLElement | null>(null)
+let previousFocus: HTMLElement | null = null
+watch([sizeGuideOpen, activePhotoModal], async ([size, photo]) => {
+  if (!import.meta.client) return
+  if (size || photo) {
+    previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    await nextTick()
+    dialogContent.value?.querySelector<HTMLElement>('button')?.focus()
+  } else {
+    await nextTick()
+    previousFocus?.focus()
+    previousFocus = null
+  }
+})
+function dialogKey(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    sizeGuideOpen.value = false
+    activePhotoModal.value = null
+  }
+  if (event.key !== 'Tab') return
+  const controls = dialogContent.value?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], [tabindex="0"]')
+  if (!controls?.length) return
+  const first = controls[0]
+  const last = controls[controls.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last?.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first?.focus()
+  }
+}
+
 
 const reviewForm = reactive({
   reviewer_name: '',
   rating: 5,
   comment: '',
-  order_number: '',
 })
 const reviewPhotoFile = ref<File | null>(null)
 const reviewPhotoPreview = ref<string | null>(null)
@@ -374,7 +361,7 @@ watch(
   () => auth.userName,
   (name) => {
     if (name && !reviewForm.reviewer_name) {
-      reviewForm.reviewer_name = name
+      reviewForm.reviewer_name = name.split(/\s+/)[0] || ''
     }
   },
   { immediate: true }
@@ -382,10 +369,17 @@ watch(
 
 const onPhotoSelected = (e: Event) => {
   const target = e.target as HTMLInputElement
-  if (target.files && target.files[0]) {
-    reviewPhotoFile.value = target.files[0]
-    reviewPhotoPreview.value = URL.createObjectURL(target.files[0])
+  const file = target.files?.[0]
+  if (!file) return
+  removeReviewPhoto()
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+    reviewError.value = 'Choose a JPEG, PNG or WebP image up to 5 MB.'
+    target.value = ''
+    return
   }
+  reviewError.value = ''
+  reviewPhotoFile.value = file
+  reviewPhotoPreview.value = URL.createObjectURL(file)
 }
 
 const removeReviewPhoto = () => {
@@ -396,7 +390,10 @@ const removeReviewPhoto = () => {
   }
 }
 
+onBeforeUnmount(removeReviewPhoto)
+
 const submitReview = async () => {
+  if (reviewSubmitting.value) return
   if (!reviewForm.reviewer_name.trim() || !reviewForm.comment.trim()) {
     reviewError.value = 'Please provide your name and review comment.'
     return
@@ -408,32 +405,18 @@ const submitReview = async () => {
     formData.append('reviewer_name', reviewForm.reviewer_name.trim())
     formData.append('rating', String(reviewForm.rating))
     formData.append('comment', reviewForm.comment.trim())
-    if (reviewForm.order_number.trim()) {
-      formData.append('order_number', reviewForm.order_number.trim())
-    }
     if (reviewPhotoFile.value) {
       formData.append('photo', reviewPhotoFile.value)
     }
 
-    const headers: Record<string, string> = {}
-    if (auth.token) {
-      headers['Authorization'] = `Bearer ${auth.token}`
-    }
-
-    await $fetch(`${apiBase}/products/${slug.value}/reviews`, {
+    await auth.apiFetch(`/products/${encodeURIComponent(slug.value)}/reviews`, {
       method: 'POST',
       body: formData,
-      headers,
     })
 
     reviewSuccess.value = true
     reviewForm.comment = ''
     removeReviewPhoto()
-    await refreshReviews()
-    setTimeout(() => {
-      writeReviewOpen.value = false
-      reviewSuccess.value = false
-    }, 3000)
   } catch (err: any) {
     reviewError.value = err?.data?.message || 'Failed to submit review. Please try again.'
   } finally {
@@ -456,7 +439,21 @@ const handleAddToCart = () => {
   }
   sizeError.value = false
 
-  if (!product.value || !activeVariant.value) return
+  if (!product.value || !activeVariant.value || isOutOfStock.value) {
+    selectionError.value = 'Choose an available size and colour.'
+    return
+  }
+  selectionError.value = ''
+  let fitting: CustomFittingMeasurements | null = null
+  if (isCustomFit.value) {
+    try {
+      fitting = measurementPayload(measurements, true)
+      if (!fitting || !hasNumericMeasurements(fitting)) throw new Error('Enter a body measurement to request custom fitting.')
+    } catch (error) {
+      selectionError.value = error instanceof Error ? error.message : 'Check the measurements you entered.'
+      return
+    }
+  }
 
   cart.addProduct({
     productId: product.value.id,
@@ -468,46 +465,14 @@ const handleAddToCart = () => {
     price: finalUnitPrice.value,
     image: product.value.primary_image,
     quantity: 1,
-    customFitting: isCustomFit.value ? { ...measurements } : null,
+    customFitting: fitting,
   })
 
-  // Pixel AddToCart event
-  trackAddToCart({
-    productId: product.value.id,
-    name: product.value.name,
-    price: finalUnitPrice.value,
-    quantity: 1,
-    size: isCustomFit.value ? 'Custom Fit' : selectedSize.value,
-  })
 }
 
-// WhatsApp Order
-const handleWhatsAppOrder = () => {
-  if (!product.value) return
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : ''
-  const sizeText = isCustomFit.value ? 'Custom Tailored Fit' : `Standard ${selectedSize.value}`
-  const priceText = formatPrice(finalUnitPrice.value)
-
-  let msg = `Hello K. Fabrics Concierge, I would like to order the following piece:\n\n`
-  msg += `• *Product:* ${product.value.name}\n`
-  msg += `• *Price:* ${priceText}\n`
-  msg += `• *Fabric:* ${product.value.fabric_type} (${product.value.piece_type})\n`
-  msg += `• *Size/Fit:* ${sizeText}\n`
-  if (selectedColor.value) {
-    msg += `• *Color:* ${selectedColor.value}\n`
-  }
-  if (isCustomFit.value) {
-    msg += `• *Custom Fitting Details:* Yes, measurements attached (${measurements.unit})\n`
-    if (measurements.chest) msg += `  - Chest: ${measurements.chest} ${measurements.unit}\n`
-    if (measurements.waist) msg += `  - Waist: ${measurements.waist} ${measurements.unit}\n`
-    if (measurements.shirt_length) msg += `  - Shirt Length: ${measurements.shirt_length} ${measurements.unit}\n`
-  }
-  msg += `\n*Product Link:* ${currentUrl}\n`
-  msg += `Please confirm availability and booking assistance.`
-
-  const encoded = encodeURIComponent(msg)
-  window.open(`https://wa.me/923001234567?text=${encoded}`, '_blank')
-}
+const productWhatsApp = computed(() => product.value
+  ? whatsapp(`Hello K. Fabrics, I have a question about ${product.value.name}.`)
+  : null)
 </script>
 
 <template>
@@ -642,9 +607,9 @@ const handleWhatsAppOrder = () => {
                   v-for="(img, idx) in product.images"
                   :key="img.id"
                   class="w-2 h-2 rounded-full transition-all"
-                  :class="[idx === activeImageIndex ? 'bg-brand-charcoal w-5' : 'bg-brand-charcoal/40']"
-                  :aria-label="`Slide to image ${idx + 1}`"
-                  @click="activeImageIndex = idx"
+                  :class="[Number(idx) === activeImageIndex ? 'bg-brand-charcoal w-5' : 'bg-brand-charcoal/40']"
+                  :aria-label="`Slide to image ${Number(idx) + 1}`"
+                  @click="activeImageIndex = Number(idx)"
                 />
               </div>
             </div>
@@ -678,7 +643,7 @@ const handleWhatsAppOrder = () => {
                 {{ formatPrice(finalUnitPrice) }}
               </span>
               <span
-                v-if="product.sale_price"
+                v-if="product.sale_price && activeVariant?.price_override == null"
                 class="line-through text-brand-muted text-sm"
               >
                 {{ formatPrice(product.base_price) }}
@@ -687,7 +652,7 @@ const handleWhatsAppOrder = () => {
                 v-if="isCustomFit"
                 class="text-[11px] text-brand-gold font-medium uppercase tracking-wider"
               >
-                (Includes +Rs. 300 Custom Fitting)
+                (Includes {{ formatPrice(customFitFee) }} custom fitting)
               </span>
             </div>
 
@@ -709,6 +674,8 @@ const handleWhatsAppOrder = () => {
                       : 'border-brand-border hover:border-brand-charcoal'
                   ]"
                   :title="item.color"
+                  :aria-label="item.color"
+                  :aria-pressed="selectedColor === item.color"
                   @click="selectedColor = item.color"
                 >
                   <span
@@ -734,7 +701,7 @@ const handleWhatsAppOrder = () => {
               </div>
 
               <!-- Sharp Size Boxes -->
-              <div class="grid grid-cols-5 gap-2">
+              <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 <button
                   v-for="size in standardSizes"
                   :key="size"
@@ -746,6 +713,7 @@ const handleWhatsAppOrder = () => {
                         ? 'border-brand-border bg-white text-brand-charcoal hover:border-brand-charcoal'
                         : 'border-brand-border bg-brand-cream/60 text-brand-muted hover:border-brand-charcoal'
                   ]"
+                  :aria-pressed="selectedSize === size && !isCustomFit"
                   @click="() => { selectedSize = size; isCustomFit = false; sizeError = false; }"
                 >
                   <span>{{ size }}</span>
@@ -759,14 +727,14 @@ const handleWhatsAppOrder = () => {
                 </button>
               </div>
 
-              <p v-if="sizeError" class="text-xs text-red-600 font-medium">
+              <p v-if="sizeError" role="alert" class="text-xs text-red-600 font-medium">
                 Please select a standard size or toggle Custom Fit.
               </p>
             </div>
 
-            <!-- Custom Fit (+Rs. 300) Atelier Toggle -->
-            <div class="border border-brand-border p-4 bg-brand-cream/40 transition-colors">
-              <div class="flex items-start justify-between cursor-pointer" @click="isCustomFit = !isCustomFit">
+            <!-- Custom Fit Atelier Toggle -->
+            <div v-if="customVariant" class="border border-brand-border p-4 bg-brand-cream/40 transition-colors">
+              <div class="flex items-start justify-between">
                 <div class="flex items-start space-x-3">
                   <input
                     id="custom-fit-checkbox"
@@ -779,11 +747,11 @@ const handleWhatsAppOrder = () => {
                     <label for="custom-fit-checkbox" class="font-serif text-sm font-bold text-brand-charcoal cursor-pointer flex items-center space-x-2">
                       <span>Bespoke Custom Fit</span>
                       <span class="text-[10px] font-sans font-semibold bg-brand-gold text-white px-2 py-0.5 tracking-luxury">
-                        +Rs. 300
+                        +{{ formatPrice(customFitFee) }}
                       </span>
                     </label>
                     <p class="text-xs text-brand-muted mt-0.5 leading-relaxed">
-                      Hand-tailored to your exact body measurements by our master craftsmen.
+                      Hand-tailored to your measurements. For privacy, unsent fitting details are not kept if you reload this page.
                     </p>
                   </div>
                 </div>
@@ -825,6 +793,7 @@ const handleWhatsAppOrder = () => {
                       <button
                         class="px-3 py-1 font-medium transition-colors"
                         :class="[measurementUnit === 'inches' ? 'bg-brand-charcoal text-white' : 'text-brand-charcoal hover:bg-brand-cream']"
+                        :aria-pressed="measurementUnit === 'inches'"
                         @click="measurementUnit = 'inches'"
                       >
                         Inches
@@ -832,6 +801,7 @@ const handleWhatsAppOrder = () => {
                       <button
                         class="px-3 py-1 font-medium transition-colors"
                         :class="[measurementUnit === 'cm' ? 'bg-brand-charcoal text-white' : 'text-brand-charcoal hover:bg-brand-cream']"
+                        :aria-pressed="measurementUnit === 'cm'"
                         @click="measurementUnit = 'cm'"
                       >
                         Centimeters
@@ -846,61 +816,79 @@ const handleWhatsAppOrder = () => {
                     </p>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                       <div>
-                        <label class="text-[10px] uppercase text-brand-muted block mb-0.5">Length</label>
+                        <label for="fit-shirt-length" class="text-[10px] uppercase text-brand-muted block mb-0.5">Length</label>
                         <input
+                          id="fit-shirt-length"
                           v-model.number="measurements.shirt_length"
                           type="number"
-                          step="0.5"
+                          min="0.01"
+                          max="300"
+                          step="0.01"
                           placeholder="e.g. 40"
                           class="w-full bg-white border border-brand-border px-2.5 py-1.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                         >
                       </div>
                       <div>
-                        <label class="text-[10px] uppercase text-brand-muted block mb-0.5">Shoulder</label>
+                        <label for="fit-shoulder" class="text-[10px] uppercase text-brand-muted block mb-0.5">Shoulder</label>
                         <input
+                          id="fit-shoulder"
                           v-model.number="measurements.shoulder"
                           type="number"
-                          step="0.5"
+                          min="0.01"
+                          max="300"
+                          step="0.01"
                           placeholder="e.g. 14.5"
                           class="w-full bg-white border border-brand-border px-2.5 py-1.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                         >
                       </div>
                       <div>
-                        <label class="text-[10px] uppercase text-brand-muted block mb-0.5">Chest / Bust</label>
+                        <label for="fit-chest" class="text-[10px] uppercase text-brand-muted block mb-0.5">Chest / Bust</label>
                         <input
+                          id="fit-chest"
                           v-model.number="measurements.chest"
                           type="number"
-                          step="0.5"
+                          min="0.01"
+                          max="300"
+                          step="0.01"
                           placeholder="e.g. 38"
                           class="w-full bg-white border border-brand-border px-2.5 py-1.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                         >
                       </div>
                       <div>
-                        <label class="text-[10px] uppercase text-brand-muted block mb-0.5">Waist</label>
+                        <label for="fit-waist" class="text-[10px] uppercase text-brand-muted block mb-0.5">Waist</label>
                         <input
+                          id="fit-waist"
                           v-model.number="measurements.waist"
                           type="number"
-                          step="0.5"
+                          min="0.01"
+                          max="300"
+                          step="0.01"
                           placeholder="e.g. 34"
                           class="w-full bg-white border border-brand-border px-2.5 py-1.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                         >
                       </div>
                       <div>
-                        <label class="text-[10px] uppercase text-brand-muted block mb-0.5">Hips</label>
+                        <label for="fit-hips" class="text-[10px] uppercase text-brand-muted block mb-0.5">Hips</label>
                         <input
+                          id="fit-hips"
                           v-model.number="measurements.hips"
                           type="number"
-                          step="0.5"
+                          min="0.01"
+                          max="300"
+                          step="0.01"
                           placeholder="e.g. 42"
                           class="w-full bg-white border border-brand-border px-2.5 py-1.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                         >
                       </div>
                       <div>
-                        <label class="text-[10px] uppercase text-brand-muted block mb-0.5">Sleeve</label>
+                        <label for="fit-sleeve-length" class="text-[10px] uppercase text-brand-muted block mb-0.5">Sleeve</label>
                         <input
+                          id="fit-sleeve-length"
                           v-model.number="measurements.sleeve_length"
                           type="number"
-                          step="0.5"
+                          min="0.01"
+                          max="300"
+                          step="0.01"
                           placeholder="e.g. 21"
                           class="w-full bg-white border border-brand-border px-2.5 py-1.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                         >
@@ -915,31 +903,40 @@ const handleWhatsAppOrder = () => {
                     </p>
                     <div class="grid grid-cols-3 gap-2.5">
                       <div>
-                        <label class="text-[10px] uppercase text-brand-muted block mb-0.5">Length</label>
+                        <label for="fit-trouser-length" class="text-[10px] uppercase text-brand-muted block mb-0.5">Length</label>
                         <input
+                          id="fit-trouser-length"
                           v-model.number="measurements.trouser_length"
                           type="number"
-                          step="0.5"
+                          min="0.01"
+                          max="300"
+                          step="0.01"
                           placeholder="e.g. 38"
                           class="w-full bg-white border border-brand-border px-2.5 py-1.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                         >
                       </div>
                       <div>
-                        <label class="text-[10px] uppercase text-brand-muted block mb-0.5">Waist</label>
+                        <label for="fit-trouser-waist" class="text-[10px] uppercase text-brand-muted block mb-0.5">Waist</label>
                         <input
+                          id="fit-trouser-waist"
                           v-model.number="measurements.trouser_waist"
                           type="number"
-                          step="0.5"
+                          min="0.01"
+                          max="300"
+                          step="0.01"
                           placeholder="e.g. 32"
                           class="w-full bg-white border border-brand-border px-2.5 py-1.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                         >
                       </div>
                       <div>
-                        <label class="text-[10px] uppercase text-brand-muted block mb-0.5">Pancha</label>
+                        <label for="fit-pancha" class="text-[10px] uppercase text-brand-muted block mb-0.5">Pancha</label>
                         <input
+                          id="fit-pancha"
                           v-model.number="measurements.pancha"
                           type="number"
-                          step="0.5"
+                          min="0.01"
+                          max="300"
+                          step="0.01"
                           placeholder="e.g. 6.5"
                           class="w-full bg-white border border-brand-border px-2.5 py-1.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                         >
@@ -961,7 +958,9 @@ const handleWhatsAppOrder = () => {
               </Transition>
             </div>
 
-            <!-- Actions: ADD TO BAG / NOTIFY ME & ORDER VIA WHATSAPP -->
+            <p v-if="selectionError" role="alert" class="text-red-800">{{ selectionError }}</p>
+
+            <!-- Actions: ADD TO BAG / NOTIFY ME & VERIFIED SUPPORT -->
             <div class="space-y-3 pt-2">
               <!-- Out of Stock Back-in-Stock Alert Box -->
               <div
@@ -978,19 +977,20 @@ const handleWhatsAppOrder = () => {
                   </p>
                 </div>
                 <p class="text-[11px] text-brand-muted leading-relaxed">
-                  Enter your WhatsApp number or email to receive an instant back-in-stock notification when restocked.
+                  Leave an email address or phone number to request a restock notification.
                 </p>
 
                 <div v-if="stockAlertSuccess" class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center space-x-2">
                   <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                   </svg>
-                  <span>Thank you! We will alert you as soon as Size {{ selectedSize }} is back in stock.</span>
+                  <span>Restock notification requested for size {{ selectedSize }}.</span>
                 </div>
 
                 <form v-else class="flex flex-col sm:flex-row gap-2" @submit.prevent="handleStockAlert">
                   <input
                     v-model="stockAlertContact"
+                    aria-label="Email address or phone number for the notification"
                     type="text"
                     placeholder="WhatsApp (+923...) or Email address"
                     required
@@ -1021,15 +1021,18 @@ const handleWhatsAppOrder = () => {
                 <span>Add to Bag</span>
               </button>
 
-              <button
+              <a
+                v-if="productWhatsApp"
+                :href="productWhatsApp"
+                target="_blank"
+                rel="noopener noreferrer"
                 class="w-full py-3.5 border border-[#25D366] text-brand-charcoal hover:bg-[#25D366] hover:text-white text-xs uppercase tracking-luxury font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
-                @click="handleWhatsAppOrder"
               >
                 <svg class="w-4 h-4 fill-[#25D366] group-hover:fill-white" viewBox="0 0 24 24">
                   <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.592 2.654-.696c1.002.547 1.799.821 2.806.821h.005c3.18 0 5.767-2.586 5.768-5.766.001-3.182-2.585-5.77-5.773-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.69.058-1.12-.08-.415-.133-.94-.317-1.616-.615-1.396-.616-2.298-2.025-2.368-2.118-.07-.093-.568-.756-.568-1.442s.36-1.025.488-1.164c.129-.139.281-.174.375-.174s.188.005.27.009c.087.004.204-.033.319.245.12.289.41 1.002.446 1.075.036.073.06.158.01.255-.05.097-.075.158-.15.244-.075.086-.157.192-.224.258-.075.074-.153.155-.066.305.087.15.387.638.83 1.032.571.508 1.052.665 1.202.739.15.074.238.065.326-.036.088-.101.376-.438.476-.588.1-.15.2-.125.337-.074.137.051.874.412 1.024.487.15.075.25.112.287.175.037.063.037.367-.107.772zM12 2C6.477 2 2 6.477 2 12c0 1.891.526 3.66 1.439 5.174L2 22l4.981-1.306C8.423 21.547 10.15 22 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
                 </svg>
-                <span>Order via WhatsApp</span>
-              </button>
+                <span>Ask about this item on WhatsApp</span>
+              </a>
 
               <!-- Save to Wishlist Toggle Button -->
               <button
@@ -1047,91 +1050,6 @@ const handleWhatsAppOrder = () => {
                 </svg>
                 <span>{{ isInWishlist ? 'Saved in Wishlist' : 'Add to Wishlist' }}</span>
               </button>
-            </div>
-
-            <!-- "Complete the Look" Cross-Sell Add-Ons (Phase 14) -->
-            <div
-              v-if="product.addons && product.addons.length > 0"
-              class="border border-brand-gold/40 bg-brand-cream/60 p-5 space-y-4 my-6"
-            >
-              <div class="flex items-center justify-between border-b border-brand-border/60 pb-2.5">
-                <div>
-                  <span class="text-[9px] uppercase tracking-[0.25em] text-brand-gold font-semibold block">
-                    Atelier Styling Pairings
-                  </span>
-                  <h3 class="font-serif text-sm font-bold uppercase tracking-luxury text-brand-charcoal">
-                    Complete the Look
-                  </h3>
-                </div>
-                <span class="text-[10px] text-brand-muted uppercase tracking-wider font-medium">
-                  1-Click Add
-                </span>
-              </div>
-
-              <div class="divide-y divide-brand-border/60">
-                <div
-                  v-for="addon in product.addons"
-                  :key="addon.id"
-                  class="py-3 flex items-center space-x-3 first:pt-0 last:pb-0"
-                >
-                  <!-- Thumbnail -->
-                  <div class="w-14 h-16 bg-white border border-brand-border overflow-hidden shrink-0">
-                    <img
-                      v-if="addon.image_url"
-                      :src="addon.image_url"
-                      :alt="addon.title"
-                      class="w-full h-full object-cover"
-                    >
-                    <div v-else class="w-full h-full flex items-center justify-center text-[10px] text-brand-muted">
-                      Add-on
-                    </div>
-                  </div>
-
-                  <!-- Info & Size Selector -->
-                  <div class="flex-1 min-w-0 text-xs">
-                    <h4 class="font-serif font-bold text-brand-charcoal truncate">
-                      {{ addon.title }}
-                    </h4>
-                    <div class="text-[11px] text-brand-gold font-medium mt-0.5">
-                      {{ formatPrice(addon.price) }}
-                    </div>
-
-                    <!-- Size options if footwear / khussa -->
-                    <div v-if="addon.sizes && addon.sizes.length > 0" class="flex items-center space-x-1 mt-1.5 flex-wrap gap-y-1">
-                      <span class="text-[9px] uppercase text-brand-muted mr-1">Size:</span>
-                      <button
-                        v-for="sz in addon.sizes"
-                        :key="sz"
-                        type="button"
-                        class="px-1.5 py-0.5 text-[10px] border transition-colors"
-                        :class="[
-                          selectedAddonSizes[addon.id] === sz
-                            ? 'border-brand-charcoal bg-brand-charcoal text-white font-medium'
-                            : 'border-brand-border bg-white text-brand-charcoal hover:border-brand-gold'
-                        ]"
-                        @click="selectedAddonSizes[addon.id] = sz"
-                      >
-                        {{ sz }}
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- 1-Click Add Button -->
-                  <button
-                    type="button"
-                    class="shrink-0 px-3.5 py-2 text-[10px] uppercase tracking-luxury font-medium transition-colors"
-                    :class="[
-                      addedAddonIds.has(addon.id)
-                        ? 'bg-green-700 text-white'
-                        : 'bg-brand-charcoal text-white hover:bg-brand-gold'
-                    ]"
-                    @click="handleAddAddon(addon)"
-                  >
-                    <span v-if="addedAddonIds.has(addon.id)">✓ Added</span>
-                    <span v-else>+ Add</span>
-                  </button>
-                </div>
-              </div>
             </div>
 
             <!-- Collapsible Luxury Accordions -->
@@ -1215,7 +1133,7 @@ const handleWhatsAppOrder = () => {
               Storefront Feedback & Transparency
             </span>
             <h2 class="font-serif text-2xl sm:text-3xl text-brand-charcoal">
-              Verified Reviews & Customer Fits
+              Customer Reviews & Fits
             </h2>
           </div>
 
@@ -1223,11 +1141,11 @@ const handleWhatsAppOrder = () => {
           <div class="flex items-center gap-6">
             <div class="text-center">
               <span class="font-serif text-4xl font-bold text-brand-charcoal block leading-none">
-                {{ Number(reviewsMeta.average_rating || 5).toFixed(1) }}
+                {{ reviewsMeta.total_reviews && reviewsMeta.average_rating !== null ? Number(reviewsMeta.average_rating).toFixed(1) : '—' }}
               </span>
-              <div class="flex items-center justify-center space-x-1 my-1 text-brand-gold text-sm">
+              <div v-if="reviewsMeta.total_reviews" class="flex items-center justify-center space-x-1 my-1 text-brand-gold text-sm" aria-hidden="true">
                 <span v-for="star in 5" :key="star">
-                  {{ star <= Math.round(reviewsMeta.average_rating || 5) ? '★' : '☆' }}
+                  {{ star <= Math.round(reviewsMeta.average_rating || 0) ? '★' : '☆' }}
                 </span>
               </div>
               <span class="text-[11px] text-brand-muted block">
@@ -1301,12 +1219,13 @@ const handleWhatsAppOrder = () => {
             <!-- Success Alert -->
             <div
               v-if="reviewSuccess"
+              role="status"
               class="p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-center space-x-3 mb-4"
             >
               <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span>Thank you! Your verified review has been submitted and published.</span>
+              <span>Thank you. Your review has been submitted for moderation.</span>
             </div>
 
             <form v-else class="space-y-4" @submit.prevent="submitReview">
@@ -1322,6 +1241,8 @@ const handleWhatsAppOrder = () => {
                     type="button"
                     class="text-2xl transition-transform hover:scale-110 focus:outline-none"
                     :class="[star <= reviewForm.rating ? 'text-brand-gold' : 'text-gray-300']"
+                    :aria-label="`Rate ${star} out of 5`"
+                    :aria-pressed="reviewForm.rating === star"
                     @click="reviewForm.rating = star"
                   >
                     ★
@@ -1332,31 +1253,10 @@ const handleWhatsAppOrder = () => {
                 </div>
               </div>
 
-              <!-- Name and Order Number -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-[11px] uppercase tracking-luxury text-brand-charcoal font-medium mb-1">
-                    Your Name *
-                  </label>
-                  <input
-                    v-model="reviewForm.reviewer_name"
-                    type="text"
-                    required
-                    placeholder="e.g. Mahnoor Khan"
-                    class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:outline-none focus:border-brand-gold"
-                  >
-                </div>
-                <div>
-                  <label class="block text-[11px] uppercase tracking-luxury text-brand-charcoal font-medium mb-1">
-                    Order Number <span class="text-brand-muted lowercase text-[10px]">(optional, for verified badge)</span>
-                  </label>
-                  <input
-                    v-model="reviewForm.order_number"
-                    type="text"
-                    placeholder="e.g. KF-2026-0001"
-                    class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:outline-none focus:border-brand-gold"
-                  >
-                </div>
+              <div>
+                <label for="reviewer-name" class="block text-[11px] uppercase tracking-luxury text-brand-charcoal font-medium mb-1">Display name *</label>
+                <input id="reviewer-name" v-model="reviewForm.reviewer_name" type="text" maxlength="255" required class="w-full bg-white border border-brand-border px-3 py-2 text-xs">
+                <p class="mt-1 text-xs text-brand-muted">Your display name will appear publicly if your review is approved.</p>
               </div>
 
               <!-- Comment -->
@@ -1381,7 +1281,7 @@ const handleWhatsAppOrder = () => {
                 <div class="flex items-center space-x-4">
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
                     class="text-xs text-brand-charcoal file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:uppercase file:tracking-luxury file:bg-brand-charcoal file:text-white hover:file:bg-brand-gold file:transition-colors file:cursor-pointer"
                     @change="onPhotoSelected"
                   >
@@ -1601,15 +1501,7 @@ const handleWhatsAppOrder = () => {
         Add to Bag
       </button>
 
-      <button
-        class="p-3 bg-[#25D366] text-white rounded-none flex items-center justify-center shrink-0"
-        aria-label="Order on WhatsApp"
-        @click="handleWhatsAppOrder"
-      >
-        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
-          <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.592 2.654-.696c1.002.547 1.799.821 2.806.821h.005c3.18 0 5.767-2.586 5.768-5.766.001-3.182-2.585-5.77-5.773-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.69.058-1.12-.08-.415-.133-.94-.317-1.616-.615-1.396-.616-2.298-2.025-2.368-2.118-.07-.093-.568-.756-.568-1.442s.36-1.025.488-1.164c.129-.139.281-.174.375-.174s.188.005.27.009c.087.004.204-.033.319.245.12.289.41 1.002.446 1.075.036.073.06.158.01.255-.05.097-.075.158-.15.244-.075.086-.157.192-.224.258-.075.074-.153.155-.066.305.087.15.387.638.83 1.032.571.508 1.052.665 1.202.739.15.074.238.065.326-.036.088-.101.376-.438.476-.588.1-.15.2-.125.337-.074.137.051.874.412 1.024.487.15.075.25.112.287.175.037.063.037.367-.107.772zM12 2C6.477 2 2 6.477 2 12c0 1.891.526 3.66 1.439 5.174L2 22l4.981-1.306C8.423 21.547 10.15 22 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
-        </svg>
-      </button>
+
     </div>
 
     <!-- Size Guide Modal -->
@@ -1627,8 +1519,13 @@ const handleWhatsAppOrder = () => {
         @click="sizeGuideOpen = false"
       >
         <div
-          class="bg-brand-white max-w-2xl w-full border border-brand-border p-6 sm:p-8 shadow-2xl relative"
+          ref="dialogContent"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="size-guide-title"
+          class="bg-brand-white max-w-2xl w-full border border-brand-border p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto"
           @click.stop
+          @keydown="dialogKey"
         >
           <!-- Close button -->
           <button
@@ -1644,7 +1541,7 @@ const handleWhatsAppOrder = () => {
           <!-- Modal Title -->
           <div class="flex items-center justify-between border-b border-brand-border pb-4 mb-6">
             <div>
-              <h2 class="font-serif text-xl sm:text-2xl font-bold uppercase tracking-luxury text-brand-charcoal">
+              <h2 id="size-guide-title" class="font-serif text-xl sm:text-2xl font-bold uppercase tracking-luxury text-brand-charcoal">
                 Size Guide
               </h2>
               <p class="text-xs text-brand-muted">Standard Pakistani Ready-to-Wear Sizing</p>
@@ -1727,7 +1624,7 @@ const handleWhatsAppOrder = () => {
         class="fixed inset-0 bg-brand-charcoal/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
         @click="activePhotoModal = null"
       >
-        <div class="relative max-w-2xl max-h-[90vh] bg-black p-1 shadow-2xl" @click.stop>
+        <div ref="dialogContent" role="dialog" aria-modal="true" aria-label="Customer fit photo" class="relative max-w-2xl max-h-[90vh] bg-black p-1 shadow-2xl" @click.stop @keydown="dialogKey">
           <button
             class="absolute -top-10 right-0 text-white hover:text-brand-gold p-1 flex items-center space-x-1 text-xs uppercase tracking-luxury font-medium"
             @click="activePhotoModal = null"
@@ -1747,3 +1644,6 @@ const handleWhatsAppOrder = () => {
     </Transition>
   </div>
 </template>
+<style scoped>
+:where(input, textarea, select, button, a):focus-visible { outline: 2px solid #202020; outline-offset: 3px; }
+</style>

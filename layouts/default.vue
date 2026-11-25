@@ -8,9 +8,9 @@ import { useWishlistStore } from '~/stores/wishlist'
 const auth = useAuthStore()
 const wishlist = useWishlistStore()
 
-onMounted(() => {
-  auth.initAuth()
-  wishlist.initWishlist()
+onMounted(async () => {
+  await auth.initAuth()
+  await wishlist.initWishlist()
 })
 </script>
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { whatsapp, emailHref } = useStoreContact()
+const chatUrl = computed(() => whatsapp('Hello K. Fabrics, I would like help with an exchange.'))
 useSeoMeta({
   title: 'Return & Exchange Policy | K. Fabrics Pakistan',
   description: 'Understand K. Fabrics return and exchange policy. 7-day hassle-free size exchange for Ready-to-Wear and complimentary alteration support for Custom Bespoke Stitching.',
@@ -100,7 +102,7 @@ useSeoMeta({
             <div class="border border-brand-border p-4 bg-brand-cream/20">
               <span class="font-mono text-xs text-brand-gold font-bold">STEP 1</span>
               <p class="font-semibold text-brand-charcoal mt-1 mb-1">Message Concierge</p>
-              <p class="text-[11px] text-brand-muted">WhatsApp us at +92 300 1234567 with your Order Number (e.g. KF-2026-0001).</p>
+              <p class="text-[11px] text-brand-muted">Contact support with your order number. Do not share your private tracking code or payment credentials.</p>
             </div>
             <div class="border border-brand-border p-4 bg-brand-cream/20">
               <span class="font-mono text-xs text-brand-gold font-bold">STEP 2</span>
@@ -122,11 +124,16 @@ useSeoMeta({
             <p class="text-xs text-brand-muted">Our customer service team is available Monday to Saturday, 10 AM to 8 PM PKT.</p>
           </div>
           <a
-            href="https://wa.me/923001234567?text=Hello%20K.%20Fabrics%2C%20I%20would%20like%20to%20request%20an%20exchange%20for%20my%20order."
+            v-if="chatUrl"
+            :href="chatUrl"
             target="_blank"
+            rel="noopener noreferrer"
             class="px-6 py-3 bg-[#25D366] text-white text-xs uppercase tracking-luxury font-medium hover:opacity-90 transition-opacity shrink-0 flex items-center space-x-2"
           >
             <span>WhatsApp Support</span>
+          </a>
+          <a v-else-if="emailHref" :href="emailHref" class="px-6 py-3 border border-brand-border text-xs uppercase tracking-luxury">
+            Email Support
           </a>
         </section>
       </div>

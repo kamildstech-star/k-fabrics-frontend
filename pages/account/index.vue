@@ -6,9 +6,6 @@ definePageMeta({
   middleware: 'auth',
 })
 
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
-
 const auth = useAuthStore()
 const cart = useCartStore()
 const router = useRouter()
@@ -33,15 +30,10 @@ const ordersLoading = ref(false)
 const reorderMessage = ref('')
 
 const fetchOrders = async () => {
-  if (!auth.token) return
+  if (!auth.isAuthenticated) return
   ordersLoading.value = true
   try {
-    const res = await $fetch<any>(`${apiBase}/user/orders`, {
-      headers: {
-        Authorization: `Bearer ${auth.token}`,
-        Accept: 'application/json',
-      },
-    })
+    const res = await auth.apiFetch<any>('/user/orders')
     orders.value = res.data || []
   } catch (e) {
     console.error('Failed to load orders', e)
@@ -50,30 +42,72 @@ const fetchOrders = async () => {
   }
 }
 
-// One-Click Reorder Action
-const handleReorder = (order: any) => {
-  if (!order.items || order.items.length === 0) return
+// Reorder only ready-to-wear variants still sold, at current catalog price.
+const reordering = ref(false)
+const customReorderLinks = ref<Array<{ name: string; slug: string }>>([])
+const handleReorder = async (order: {
+  items?: Array<{ product_id: number | null; variant_id: number | null; product_slug?: string | null; product_name: string; size: string | null; quantity: number; stitching_request?: { id?: number; request_type?: string } | null }>
+  stitching_requests?: Array<{ request_type: string }>
+}) => {
+  if (reordering.value) return
+  reordering.value = true
+  customReorderLinks.value = []
+  const messages: string[] = []
 
-  let addedCount = 0
-  for (const item of order.items) {
-    cart.addProduct({
-      productId: item.product_id,
-      variantId: item.variant_id,
-      name: item.product_name,
-      slug: `product-${item.product_id}`,
-      size: item.size,
-      color: item.color,
-      price: item.unit_price,
-      quantity: item.quantity,
-      customFitting: item.stitching_request ? { unit: 'inches' } : null,
-    })
-    addedCount++
+  try {
+    let added = 0
+    let unavailable = 0
+    let custom = order.stitching_requests?.some(request => request.request_type === 'standalone_stitching') ?? false
+    for (const item of order.items ?? []) {
+      if (item.stitching_request?.id || item.size?.toLowerCase().startsWith('custom')) {
+        custom = true
+        if (item.product_slug && !customReorderLinks.value.some(link => link.slug === item.product_slug)) {
+          customReorderLinks.value.push({ name: item.product_name, slug: item.product_slug })
+        }
+        continue
+      }
+      if (!item.product_id || !item.variant_id || !item.product_slug) {
+        unavailable++
+        continue
+      }
+      try {
+        const { data: product } = await auth.apiFetch<{ data: {
+          id: number; slug: string; name: string; base_price: number; sale_price: number | null; primary_image?: string
+          variants: Array<{ id: number; size: string; color: string | null; stock_quantity: number; is_active: boolean; price_override: number | null }>
+        } }>(`/products/${encodeURIComponent(item.product_slug)}`)
+        const variant = product.variants.find(candidate => candidate.id === item.variant_id && candidate.is_active)
+        if (product.id !== item.product_id || !variant || variant.size.toLowerCase().startsWith('custom')) {
+          unavailable++
+          continue
+        }
+        const inCart = cart.items.filter(line => line.variantId === variant.id)
+          .reduce((quantity, line) => quantity + line.quantity, 0)
+        const quantity = Math.min(item.quantity, Math.max(0, variant.stock_quantity - inCart))
+        if (quantity < item.quantity) unavailable++
+        if (quantity === 0) continue
+        cart.addProduct({
+          productId: product.id,
+          variantId: variant.id,
+          name: product.name,
+          slug: product.slug,
+          size: variant.size,
+          color: variant.color ?? undefined,
+          price: variant.price_override ?? product.sale_price ?? product.base_price,
+          image: product.primary_image,
+          quantity,
+        })
+        added += quantity
+      } catch {
+        unavailable++
+      }
+    }
+    if (added) messages.push(`Added ${added} ${added === 1 ? 'item' : 'items'} at current prices.`)
+    if (unavailable) messages.push('Some items are no longer available in the original quantity or size.')
+    if (custom) messages.push('Start a new fitting for custom items or a new stitching booking so you can confirm measurements.')
+    reorderMessage.value = messages.join(' ') || 'There are no items available to reorder.'
+  } finally {
+    reordering.value = false
   }
-
-  reorderMessage.value = `Successfully added ${addedCount} item(s) from Order #${order.order_number} to your bag!`
-  setTimeout(() => {
-    reorderMessage.value = ''
-  }, 5000)
 }
 
 // ================= TAB 2: MEASUREMENTS =================
@@ -103,15 +137,10 @@ const measurementForm = reactive({
 })
 
 const fetchMeasurements = async () => {
-  if (!auth.token) return
+  if (!auth.isAuthenticated) return
   measurementsLoading.value = true
   try {
-    const res = await $fetch<any>(`${apiBase}/user/measurements`, {
-      headers: {
-        Authorization: `Bearer ${auth.token}`,
-        Accept: 'application/json',
-      },
-    })
+    const res = await auth.apiFetch<any>('/user/measurements')
     measurements.value = res.data || []
   } catch (e) {
     console.error('Failed to load measurements', e)
@@ -173,17 +202,13 @@ const saveMeasurement = async () => {
   measurementFormError.value = ''
   try {
     const endpoint = editingMeasurementId.value
-      ? `${apiBase}/user/measurements/${editingMeasurementId.value}`
-      : `${apiBase}/user/measurements`
+      ? `/user/measurements/${editingMeasurementId.value}`
+      : `/user/measurements`
     const method = editingMeasurementId.value ? 'PUT' : 'POST'
 
-    await $fetch<any>(endpoint, {
+    await auth.apiFetch<any>(endpoint, {
       method,
       body: measurementForm,
-      headers: {
-        Authorization: `Bearer ${auth.token}`,
-        Accept: 'application/json',
-      },
     })
 
     measurementModalOpen.value = false
@@ -196,12 +221,8 @@ const saveMeasurement = async () => {
 const deleteMeasurement = async (id: number) => {
   if (!confirm('Are you sure you want to delete this measurement profile?')) return
   try {
-    await $fetch<any>(`${apiBase}/user/measurements/${id}`, {
+    await auth.apiFetch<any>(`/user/measurements/${id}`, {
       method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${auth.token}`,
-        Accept: 'application/json',
-      },
     })
     await fetchMeasurements()
   } catch (e) {
@@ -226,15 +247,10 @@ const addressForm = reactive({
 })
 
 const fetchAddresses = async () => {
-  if (!auth.token) return
+  if (!auth.isAuthenticated) return
   addressesLoading.value = true
   try {
-    const res = await $fetch<any>(`${apiBase}/user/addresses`, {
-      headers: {
-        Authorization: `Bearer ${auth.token}`,
-        Accept: 'application/json',
-      },
-    })
+    const res = await auth.apiFetch<any>('/user/addresses')
     addresses.value = res.data || []
   } catch (e) {
     console.error('Failed to load addresses', e)
@@ -276,17 +292,13 @@ const saveAddress = async () => {
   addressFormError.value = ''
   try {
     const endpoint = editingAddressId.value
-      ? `${apiBase}/user/addresses/${editingAddressId.value}`
-      : `${apiBase}/user/addresses`
+      ? `/user/addresses/${editingAddressId.value}`
+      : `/user/addresses`
     const method = editingAddressId.value ? 'PUT' : 'POST'
 
-    await $fetch<any>(endpoint, {
+    await auth.apiFetch<any>(endpoint, {
       method,
       body: addressForm,
-      headers: {
-        Authorization: `Bearer ${auth.token}`,
-        Accept: 'application/json',
-      },
     })
 
     addressModalOpen.value = false
@@ -299,12 +311,8 @@ const saveAddress = async () => {
 const deleteAddress = async (id: number) => {
   if (!confirm('Are you sure you want to remove this address?')) return
   try {
-    await $fetch<any>(`${apiBase}/user/addresses/${id}`, {
+    await auth.apiFetch<any>(`/user/addresses/${id}`, {
       method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${auth.token}`,
-        Accept: 'application/json',
-      },
     })
     await fetchAddresses()
   } catch (e) {
@@ -314,13 +322,9 @@ const deleteAddress = async (id: number) => {
 
 const setAsDefaultAddress = async (addr: any) => {
   try {
-    await $fetch<any>(`${apiBase}/user/addresses/${addr.id}`, {
+    await auth.apiFetch<any>(`/user/addresses/${addr.id}`, {
       method: 'PUT',
       body: { ...addr, is_default: true },
-      headers: {
-        Authorization: `Bearer ${auth.token}`,
-        Accept: 'application/json',
-      },
     })
     await fetchAddresses()
   } catch (e) {
@@ -331,7 +335,7 @@ const setAsDefaultAddress = async (addr: any) => {
 // Initial Data Fetch
 onMounted(async () => {
   await auth.initAuth()
-  if (auth.token) {
+  if (auth.isAuthenticated) {
     fetchOrders()
     fetchMeasurements()
     fetchAddresses()
@@ -339,14 +343,22 @@ onMounted(async () => {
 })
 
 // Logout Action
+const logoutError = ref('')
 const handleLogout = async () => {
-  await auth.logout()
-  router.push('/')
+  logoutError.value = ''
+  try {
+    await auth.logout()
+    orders.value = []
+    await router.push('/')
+  } catch (error: unknown) {
+    logoutError.value = (error as Error).message
+  }
 }
 </script>
 
 <template>
-  <div class="bg-brand-white min-h-screen py-10 sm:py-16">
+  <div v-if="!auth.isAuthenticated" class="min-h-screen py-10 text-center text-sm" role="status">Checking your session…</div>
+  <div v-else class="bg-brand-white min-h-screen py-10 sm:py-16">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Breadcrumbs -->
       <nav class="flex items-center space-x-2 text-[10px] uppercase tracking-luxury text-brand-muted mb-8">
@@ -368,9 +380,15 @@ const handleLogout = async () => {
           v-if="reorderMessage"
           class="mb-6 p-4 bg-brand-cream border border-brand-gold text-brand-charcoal text-xs flex items-center justify-between"
         >
-          <div class="flex items-center space-x-2">
-            <span class="text-brand-gold font-bold">✓</span>
-            <span>{{ reorderMessage }}</span>
+          <div role="status">
+            <p>{{ reorderMessage }}</p>
+            <ul v-if="customReorderLinks.length" class="mt-2 space-y-1">
+              <li v-for="product in customReorderLinks" :key="product.slug">
+                <NuxtLink :to="`/products/${encodeURIComponent(product.slug)}`" class="underline">
+                  Start a new fitting for {{ product.name }}
+                </NuxtLink>
+              </li>
+            </ul>
           </div>
           <button
             class="text-[10px] uppercase tracking-luxury font-semibold underline"
@@ -402,6 +420,8 @@ const handleLogout = async () => {
           Sign Out
         </button>
       </div>
+      <p v-if="logoutError" role="alert" class="my-3 text-sm text-red-700">{{ logoutError }}</p>
+
 
       <!-- Dashboard Grid: Sidebar Navigation + Tab Content -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -524,18 +544,16 @@ const handleLogout = async () => {
                     <p class="text-[11px] text-brand-muted mt-0.5">
                       Placed on {{ formatDate(order.created_at) }} · Total: <strong class="text-brand-charcoal font-semibold">{{ formatPrice(order.total_amount) }}</strong>
                     </p>
+                    <p v-if="order.tracking_number" class="text-xs text-brand-charcoal mt-1">
+                      <span v-if="order.courier_name">{{ order.courier_name }} · </span>Tracking: {{ order.tracking_number }}
+                    </p>
                   </div>
 
                   <div class="flex items-center space-x-3">
-                    <NuxtLink
-                      :to="`/track-order?order_number=${order.order_number}&phone=${order.customer_phone}`"
-                      class="px-4 py-2 border border-brand-border text-xs uppercase tracking-luxury text-brand-charcoal hover:border-brand-charcoal transition-colors"
-                    >
-                      Track Order
-                    </NuxtLink>
                     <button
                       class="px-4 py-2 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors shadow-sm"
-                      title="Add items back to shopping bag"
+                      title="Add available ready-to-wear items at current prices"
+                      :disabled="reordering"
                       @click="handleReorder(order)"
                     >
                       Reorder

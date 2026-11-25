@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { standardCartItems } from '~/utils/cart-privacy'
 
 export interface CustomFittingMeasurements {
   unit: 'inches' | 'cm'
@@ -53,6 +54,7 @@ export const useCartStore = defineStore('cart', {
   state: () => ({
     items: [] as CartItem[],
     isOpen: false,
+    initialized: false,
   }),
 
   getters: {
@@ -83,25 +85,25 @@ export const useCartStore = defineStore('cart', {
 
   actions: {
     initCart() {
-      if (import.meta.client) {
-        try {
-          const saved = localStorage.getItem('k_fabrics_cart')
-          if (saved) {
-            this.items = JSON.parse(saved)
-          }
-        } catch (e) {
-          console.error('Failed to parse cart from localStorage', e)
-        }
+      if (!import.meta.client || this.initialized) return
+      this.initialized = true
+      try {
+        const saved = localStorage.getItem('k_fabrics_cart')
+        if (saved) this.items = standardCartItems(JSON.parse(saved))
+      } catch {
+        // Ignore invalid browser storage.
+      } finally {
+        this.persist()
+        try { localStorage.removeItem('k_fabrics_cart_session') } catch { /* Storage unavailable. */ }
       }
     },
 
     persist() {
-      if (import.meta.client) {
-        try {
-          localStorage.setItem('k_fabrics_cart', JSON.stringify(this.items))
-        } catch (e) {
-          console.error('Failed to save cart to localStorage', e)
-        }
+      if (!import.meta.client) return
+      try {
+        localStorage.setItem('k_fabrics_cart', JSON.stringify(standardCartItems(this.items)))
+      } catch {
+        // The bag still works in memory if persistent storage is unavailable.
       }
     },
 
@@ -146,7 +148,7 @@ export const useCartStore = defineStore('cart', {
       }
 
       // Add as new line item
-      const lineId = `product-${product.productId}-${product.variantId}-${Date.now()}`
+      const lineId = `product-${product.productId}-${product.variantId}-${Date.now()}-${this.items.length}`
       this.items.push({
         id: lineId,
         type: 'product',
@@ -179,7 +181,7 @@ export const useCartStore = defineStore('cart', {
       specialInstructions?: string
       measurements?: CustomFittingMeasurements | null
     }) {
-      const lineId = `stitching-${booking.serviceId}-${Date.now()}`
+      const lineId = `stitching-${booking.serviceId}-${Date.now()}-${this.items.length}`
       this.items.push({
         id: lineId,
         type: 'stitching',
@@ -201,51 +203,9 @@ export const useCartStore = defineStore('cart', {
       this.openCart()
     },
 
-    addAddon(addon: {
-      addonId: number
-      productId: number
-      title: string
-      price: number
-      image?: string
-      size?: string
-    }) {
-      const selectedSize = addon.size || 'One Size'
-      const existing = this.items.find(
-        item => item.addonId === addon.addonId && item.size === selectedSize
-      )
-
-      if (existing) {
-        existing.quantity += 1
-      } else {
-        const lineId = `addon-${addon.addonId}-${selectedSize}-${Date.now()}`
-        this.items.push({
-          id: lineId,
-          type: 'product',
-          productId: addon.productId,
-          addonId: addon.addonId,
-          isAddon: true,
-          parentProductId: addon.productId,
-          selectedSize: addon.size,
-          name: addon.title,
-          size: selectedSize,
-          price: addon.price,
-          image: addon.image,
-          quantity: 1,
-        })
-      }
-
-      this.persist()
-      this.openCart()
-    },
-
-    setCartItems(newItems: CartItem[]) {
-      this.items = newItems
-      this.persist()
-    },
-
     updateQuantity(id: string, delta: number) {
       const item = this.items.find(i => i.id === id)
-      if (!item) return
+      if (!item || item.type !== 'product' || item.customFitting) return
 
       const newQty = item.quantity + delta
       if (newQty <= 0) {

@@ -169,9 +169,10 @@ const formatPrice = (value: number) => {
               <!-- Price & Quantity -->
               <div class="flex items-center justify-between mt-3">
                 <!-- Quantity Controls for Ready-to-Wear -->
-                <div v-if="item.type === 'product'" class="flex items-center border border-brand-border">
+                <div v-if="item.type === 'product' && !item.customFitting" class="flex items-center border border-brand-border">
                   <button
                     class="px-2 py-1 text-xs text-brand-charcoal hover:bg-brand-cream transition-colors"
+                    :aria-label="`Decrease quantity of ${item.name}`"
                     @click="cart.updateQuantity(item.id, -1)"
                   >
                     -
@@ -181,6 +182,7 @@ const formatPrice = (value: number) => {
                   </span>
                   <button
                     class="px-2 py-1 text-xs text-brand-charcoal hover:bg-brand-cream transition-colors"
+                    :aria-label="`Increase quantity of ${item.name}`"
                     @click="cart.updateQuantity(item.id, 1)"
                   >
                     +
@@ -209,13 +211,13 @@ const formatPrice = (value: number) => {
             class="p-3 bg-brand-cream border border-brand-gold/40 text-[11px] text-brand-charcoal leading-relaxed"
           >
             <span class="font-semibold text-brand-gold uppercase tracking-wider block mb-0.5">Custom Tailoring Notice</span>
-            Orders with custom tailoring require a 50% advance payment via JazzCash, EasyPaisa, or Bank Transfer.
+            Checkout will show the exact advance and available payment instructions. For privacy, tailoring measurements and reference photos are not saved if you reload or close this tab.
           </div>
 
           <!-- Price Calculation -->
           <div class="space-y-1.5 text-xs text-brand-muted">
             <div class="flex justify-between">
-              <span>Subtotal</span>
+              <span>Estimated subtotal</span>
               <span class="text-brand-charcoal font-medium">{{ formatPrice(cart.subtotal) }}</span>
             </div>
             <div class="flex justify-between">

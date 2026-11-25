@@ -2,7 +2,6 @@
 import { useAuthStore } from '~/stores/auth'
 
 const auth = useAuthStore()
-const route = useRoute()
 const router = useRouter()
 
 const form = reactive({
@@ -28,8 +27,7 @@ const handleLogin = async () => {
       password: form.password,
     })
 
-    const redirectTo = (route.query.redirect as string) || '/account'
-    router.push(redirectTo)
+    await router.push('/account')
   } catch (err: any) {
     errorMsg.value = err.message || 'Login failed. Please check your credentials.'
   } finally {
@@ -37,11 +35,6 @@ const handleLogin = async () => {
   }
 }
 
-// Quick demo login filler
-const fillDemoAccount = () => {
-  form.email = 'ayesha@kfabrics.com'
-  form.password = 'password'
-}
 </script>
 
 <template>
@@ -61,18 +54,20 @@ const fillDemoAccount = () => {
       </div>
 
       <!-- Error Alert -->
-      <div v-if="errorMsg" class="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 text-xs">
+      <div v-if="errorMsg" role="alert" class="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 text-xs">
         {{ errorMsg }}
       </div>
 
       <!-- Login Form -->
       <form class="space-y-5" @submit.prevent="handleLogin">
         <div>
-          <label class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1.5">
+          <label for="login-email" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1.5">
             Email Address *
           </label>
           <input
+            id="login-email"
             v-model="form.email"
+            autocomplete="username"
             type="email"
             required
             placeholder="e.g. ayesha@example.com"
@@ -82,12 +77,14 @@ const fillDemoAccount = () => {
 
         <div>
           <div class="flex items-center justify-between mb-1.5">
-            <label class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block">
+            <label for="login-password" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block">
               Password *
             </label>
           </div>
           <input
+            id="login-password"
             v-model="form.password"
+            autocomplete="current-password"
             type="password"
             required
             placeholder="••••••••"
@@ -105,16 +102,8 @@ const fillDemoAccount = () => {
         </button>
       </form>
 
-      <!-- Demo Shortcut & Registration Link -->
+      <!-- Registration Link -->
       <div class="mt-8 pt-6 border-t border-brand-border space-y-4 text-center text-xs">
-        <button
-          type="button"
-          class="text-[11px] text-brand-gold hover:text-brand-charcoal underline underline-offset-4 font-medium"
-          @click="fillDemoAccount"
-        >
-          Use Demo Customer Account (ayesha@kfabrics.com)
-        </button>
-
         <p class="text-brand-muted">
           New to K. Fabrics?
           <NuxtLink

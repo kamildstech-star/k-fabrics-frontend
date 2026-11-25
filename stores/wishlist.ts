@@ -20,6 +20,8 @@ export interface WishlistProduct {
   }>
 }
 
+const guestKey = 'k_fabrics_guest_wishlist_v2'
+
 export const useWishlistStore = defineStore('wishlist', {
   state: () => ({
     productIds: [] as number[],
@@ -30,95 +32,68 @@ export const useWishlistStore = defineStore('wishlist', {
 
   getters: {
     totalItems: (state): number => state.productIds.length,
-    isInWishlist: (state) => (productId: number): boolean => {
-      return state.productIds.includes(productId)
-    },
+    isInWishlist: (state) => (productId: number): boolean => state.productIds.includes(productId),
   },
 
   actions: {
     async initWishlist() {
-      if (this.initialized) return
-
+      if (this.initialized || !import.meta.client) return
       const auth = useAuthStore()
-
-      // 1. Load local guest wishlist
-      if (import.meta.client) {
-        try {
-          const savedIds = localStorage.getItem('k_fabrics_wishlist_ids')
-          const savedItems = localStorage.getItem('k_fabrics_wishlist_items')
-          if (savedIds) this.productIds = JSON.parse(savedIds)
-          if (savedItems) this.items = JSON.parse(savedItems)
-        } catch (e) {
-          console.error('Failed to parse wishlist from localStorage', e)
-        }
-      }
-
-      // 2. If authenticated, sync with backend
-      if (auth.token) {
-        await this.syncWithBackend()
-      }
-
+      await auth.initAuth()
+      if (this.initialized) return
       this.initialized = true
+      if (auth.isAuthenticated) await this.syncWithBackend()
+      else this.resetForGuest()
     },
 
-    persistLocal() {
-      if (import.meta.client) {
-        try {
-          localStorage.setItem('k_fabrics_wishlist_ids', JSON.stringify(this.productIds))
-          localStorage.setItem('k_fabrics_wishlist_items', JSON.stringify(this.items))
-        } catch (e) {
-          console.error('Failed to save wishlist to localStorage', e)
-        }
+    readGuest(): WishlistProduct[] {
+      if (!import.meta.client) return []
+      try {
+        const items: unknown = JSON.parse(localStorage.getItem(guestKey) || '[]')
+        return Array.isArray(items) ? items.filter((item) => Number.isInteger(item?.id)) : []
+      } catch {
+        return []
       }
+    },
+
+    resetForGuest() {
+      this.items = this.readGuest()
+      this.productIds = this.items.map(item => item.id)
+    },
+
+    persistGuest() {
+      if (!import.meta.client) return
+      try {
+        localStorage.setItem(guestKey, JSON.stringify(this.items))
+      } catch { /* Storage can be disabled. */ }
     },
 
     async syncWithBackend() {
       const auth = useAuthStore()
-      if (!auth.token) return
-
-      const config = useRuntimeConfig()
-      const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
+      const userId = auth.user?.id
+      if (!userId || this.isLoading) return
 
       this.isLoading = true
       try {
-        // First sync any guest IDs that aren't yet on server
-        if (this.productIds.length > 0) {
-          const idsRes = await $fetch<any>(`${apiBase}/user/wishlist/ids`, {
-            headers: {
-              Authorization: `Bearer ${auth.token}`,
-              Accept: 'application/json',
-            },
-          })
-          const serverIds: number[] = idsRes.product_ids || []
-
-          for (const localId of this.productIds) {
-            if (!serverIds.includes(localId)) {
-              await $fetch<any>(`${apiBase}/user/wishlist/toggle`, {
-                method: 'POST',
-                body: { product_id: localId },
-                headers: {
-                  Authorization: `Bearer ${auth.token}`,
-                  Accept: 'application/json',
-                },
-              })
-            }
+        const guestItems = this.readGuest()
+        if (guestItems.length) {
+          const server = await auth.apiFetch<{ product_ids: number[] }>('/user/wishlist/ids')
+          const ids = new Set(server.product_ids)
+          for (const local of guestItems) {
+            if (auth.user?.id !== userId) return
+            if (ids.has(local.id)) continue
+            await auth.apiFetch('/user/wishlist/toggle', { method: 'POST', body: { product_id: local.id } })
+            ids.add(local.id)
           }
+          if (auth.user?.id !== userId) return
+          try { localStorage.removeItem(guestKey) } catch { /* Storage can be disabled. */ }
         }
-
-        // Now load full wishlist from server
-        const res = await $fetch<any>(`${apiBase}/user/wishlist`, {
-          headers: {
-            Authorization: `Bearer ${auth.token}`,
-            Accept: 'application/json',
-          },
-        })
-
-        const serverItems = res.data || []
-        this.items = serverItems
-        this.productIds = serverItems.map((p: any) => p.id)
-        this.persistLocal()
-      } catch (e) {
-        console.error('Failed to sync wishlist with backend', e)
+        const response = await auth.apiFetch<{ data: WishlistProduct[] }>('/user/wishlist')
+        if (auth.user?.id !== userId) return
+        this.items = response.data
+        this.productIds = response.data.map(item => item.id)
+      } catch {
+        // Leave the existing wishlist unchanged if it cannot be synchronized.
       } finally {
         this.isLoading = false
       }
@@ -126,74 +101,51 @@ export const useWishlistStore = defineStore('wishlist', {
 
     async toggle(product: WishlistProduct) {
       const auth = useAuthStore()
-      const config = useRuntimeConfig()
-      const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
+      const userId = auth.user?.id
+      if (this.isLoading) return
 
-      const index = this.productIds.indexOf(product.id)
-
-      if (index > -1) {
-        // Remove locally
-        this.productIds.splice(index, 1)
-        this.items = this.items.filter(item => item.id !== product.id)
-      } else {
-        // Add locally
-        this.productIds.push(product.id)
-        if (!this.items.some(item => item.id === product.id)) {
-          this.items.push(product)
-        }
+      if (!userId) {
+        this.items = this.isInWishlist(product.id)
+          ? this.items.filter(item => item.id !== product.id)
+          : [...this.items, product]
+        this.productIds = this.items.map(item => item.id)
+        this.persistGuest()
+        return
       }
-      this.persistLocal()
 
-      // If user is logged in, sync to backend
-      if (auth.token) {
-        try {
-          const res = await $fetch<any>(`${apiBase}/user/wishlist/toggle`, {
-            method: 'POST',
-            body: { product_id: product.id },
-            headers: {
-              Authorization: `Bearer ${auth.token}`,
-              Accept: 'application/json',
-            },
-          })
-          if (res.product_ids) {
-            this.productIds = res.product_ids
-            this.persistLocal()
-          }
-        } catch (e) {
-          console.error('Failed to toggle wishlist on backend', e)
-        }
+      this.isLoading = true
+      try {
+        const response = await auth.apiFetch<{ product_ids: number[] }>('/user/wishlist/toggle', {
+          method: 'POST', body: { product_id: product.id },
+        })
+        if (auth.user?.id !== userId) return
+        this.productIds = response.product_ids
+        this.items = this.items.filter(item => this.productIds.includes(item.id))
+        if (this.isInWishlist(product.id) && !this.items.some(item => item.id === product.id)) this.items.push(product)
+      } catch {
+        // Keep the last server-confirmed state on failure.
+      } finally {
+        this.isLoading = false
       }
     },
 
     async remove(productId: number) {
-      const auth = useAuthStore()
-      const config = useRuntimeConfig()
-      const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
-
-      this.productIds = this.productIds.filter(id => id !== productId)
-      this.items = this.items.filter(item => item.id !== productId)
-      this.persistLocal()
-
-      if (auth.token) {
-        try {
-          await $fetch<any>(`${apiBase}/user/wishlist/toggle`, {
-            method: 'POST',
-            body: { product_id: productId },
-            headers: {
-              Authorization: `Bearer ${auth.token}`,
-              Accept: 'application/json',
-            },
-          })
-        } catch (e) {
-          console.error('Failed to remove item from wishlist on backend', e)
-        }
-      }
+      const product = this.items.find(item => item.id === productId)
+      if (product) await this.toggle(product)
     },
 
-    clearWishlist() {
-      this.productIds = []
-      this.items = []
-      this.persistLocal()
+    async clearWishlist() {
+      const auth = useAuthStore()
+      if (!auth.isAuthenticated) {
+        this.items = []
+        this.productIds = []
+        this.persistGuest()
+        return
+      }
+      for (const product of [...this.items]) {
+        if (!auth.isAuthenticated) return
+        await this.remove(product.id)
+      }
     },
   },
 })

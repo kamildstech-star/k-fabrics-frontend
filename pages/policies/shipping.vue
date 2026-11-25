@@ -103,15 +103,14 @@ useSeoMeta({
         <section class="space-y-3">
           <h2 class="font-serif text-lg sm:text-xl font-semibold text-brand-charcoal flex items-center space-x-2">
             <span class="text-brand-gold font-mono text-sm">03.</span>
-            <span>Courier Partners & Live Tracking</span>
+            <span>Courier and Order Tracking</span>
           </h2>
           <p>
-            We partner with Pakistan’s premier logistics providers including <strong class="font-medium text-brand-charcoal">Trax Logistics, Call Courier, TCS, and Leopards Courier</strong>.
+            The courier name and tracking number appear after staff have recorded the dispatch details.
           </p>
           <p>
-            Once your order is dispatched from our fulfillment center, you will receive an SMS and email notification with your tracking number. 
-            You can monitor your shipment’s live transit progress anytime on our 
-            <NuxtLink to="/track-order" class="text-brand-gold font-semibold underline underline-offset-2">Live Order Tracking Portal</NuxtLink>.
+            Use your order number and private tracking code to view the latest available order status on the
+            <NuxtLink to="/track-order" class="text-brand-gold font-semibold underline underline-offset-2">Track Order page</NuxtLink>.
           </p>
         </section>
 
@@ -122,8 +121,8 @@ useSeoMeta({
             <span>Cash on Delivery (COD) Rules</span>
           </h2>
           <ul class="list-disc pl-5 space-y-1.5 text-brand-muted">
-            <li><strong class="text-brand-charcoal font-medium">Standard Pret:</strong> 100% Cash on Delivery available up to Rs. 25,000.</li>
-            <li><strong class="text-brand-charcoal font-medium">Custom Tailored Orders:</strong> Require a 50% advance confirmation via JazzCash, EasyPaisa, or Direct Bank Transfer, with the remaining 50% balance payable as COD at your doorstep.</li>
+            <li><strong class="text-brand-charcoal font-medium">Standard Pret:</strong> Cash on Delivery is available when shown at checkout and requires order confirmation.</li>
+            <li><strong class="text-brand-charcoal font-medium">Custom Tailored Orders:</strong> Checkout shows the required advance and available payment options. Cutting begins only once the advance has been verified.</li>
             <li>Please have exact cash ready at the time of rider arrival to ensure a smooth handover.</li>
           </ul>
         </section>

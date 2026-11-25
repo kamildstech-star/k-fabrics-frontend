@@ -1,3 +1,8 @@
+<script setup lang="ts">
+const { email, emailHref, whatsapp } = useStoreContact()
+const chatUrl = computed(() => whatsapp('Hello K. Fabrics, I have a question about your collection.'))
+</script>
+
 <template>
   <footer class="bg-brand-cream border-t border-brand-border text-brand-charcoal pt-16 pb-12 mt-20">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -98,15 +103,13 @@
               <strong class="text-brand-charcoal">Hours:</strong><br>
               Monday – Saturday, 10:00 AM – 8:00 PM PKT
             </p>
-            <p>
-              <strong class="text-brand-charcoal">WhatsApp Styling Hotline:</strong><br>
-              <a
-                href="https://wa.me/923001234567"
-                target="_blank"
-                class="text-brand-gold font-medium hover:underline inline-block mt-0.5"
-              >
-                +92 300 1234567
+            <p v-if="chatUrl">
+              <a :href="chatUrl" target="_blank" rel="noopener noreferrer" class="text-brand-gold font-medium hover:underline">
+                WhatsApp Styling Hotline
               </a>
+            </p>
+            <p v-if="emailHref">
+              <a :href="emailHref" class="text-brand-gold font-medium hover:underline">{{ email }}</a>
             </p>
           </div>
         </div>
@@ -131,7 +134,8 @@
 
     <!-- Floating Luxury WhatsApp Concierge Button -->
     <a
-      href="https://wa.me/923001234567?text=Hello%20K.%20Fabrics%2C%20I%20would%20like%20to%20inquire%20about%20your%20collection."
+      v-if="chatUrl"
+      :href="chatUrl"
       target="_blank"
       rel="noopener noreferrer"
       class="fixed bottom-6 right-6 z-40 bg-[#25D366] text-white p-3.5 rounded-full shadow-xl hover:scale-105 transition-all duration-300 flex items-center justify-center group"

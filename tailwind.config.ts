@@ -23,8 +23,8 @@ export default <Config>{
         },
       },
       fontFamily: {
-        serif: ['"Playfair Display"', 'Georgia', 'serif'],
-        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+        serif: ['"Playfair Display Variable"', 'Georgia', 'serif'],
+        sans: ['"Plus Jakarta Sans Variable"', 'sans-serif'],
       },
       letterSpacing: {
         luxury: '0.15em',

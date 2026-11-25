@@ -81,11 +81,13 @@ const formatPrice = (amount: number) => {
           @click="cart.closeCart()"
         >
           <div class="aspect-[3/4] w-full overflow-hidden bg-brand-cream border border-brand-border/50 relative mb-1.5">
-            <img
-              :src="item.primary_image || 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=300&q=80'"
+            <ProductImage
+              :src="item.primary_image || '/images/product-placeholder.svg'"
               :alt="item.name"
+              :width="112"
+              :height="150"
               class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-200"
-            >
+            />
           </div>
           <p class="text-[11px] font-serif text-brand-charcoal truncate group-hover:text-brand-gold transition-colors">
             {{ item.name }}

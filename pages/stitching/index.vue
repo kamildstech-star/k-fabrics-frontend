@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useCartStore, type CustomFittingMeasurements } from '~/stores/cart'
 import { useAuthStore } from '~/stores/auth'
+import { convertMeasurements, hasNumericMeasurements, measurementPayload } from '~/utils/checkout'
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
@@ -14,14 +15,9 @@ const selectedSavedProfileId = ref<number | null>(null)
 
 onMounted(async () => {
   await auth.initAuth()
-  if (auth.token) {
+  if (auth.isAuthenticated) {
     try {
-      const res = await $fetch<any>(`${apiBase}/user/measurements`, {
-        headers: {
-          Authorization: `Bearer ${auth.token}`,
-          Accept: 'application/json',
-        },
-      })
+      const res = await auth.apiFetch<{ data: any[] }>('/user/measurements')
       savedProfiles.value = res.data || []
     } catch (e) {
       // ignore
@@ -122,17 +118,28 @@ const specialInstructions = ref('')
 // Image upload state
 const designReferencePreview = ref<string | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const referenceError = ref('')
+let referenceRead = 0
 
 const handleFileUpload = (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
-  if (file) {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      designReferencePreview.value = e.target?.result as string
-    }
-    reader.readAsDataURL(file)
+  if (!file) return
+  const read = ++referenceRead
+  referenceError.value = ''
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+    referenceError.value = 'Choose a JPEG, PNG or WebP image up to 5 MB.'
+    target.value = ''
+    return
   }
+  const reader = new FileReader()
+  reader.onload = () => {
+    if (read === referenceRead && typeof reader.result === 'string') designReferencePreview.value = reader.result
+  }
+  reader.onerror = () => {
+    if (read === referenceRead) referenceError.value = 'Could not read this image. Try another file.'
+  }
+  reader.readAsDataURL(file)
 }
 
 const triggerFileInput = () => {
@@ -140,6 +147,8 @@ const triggerFileInput = () => {
 }
 
 const removeReferenceImage = () => {
+  ++referenceRead
+  referenceError.value = ''
   designReferencePreview.value = null
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
@@ -165,24 +174,30 @@ const manualMeasurements = reactive<CustomFittingMeasurements>({
   pancha: null,
 })
 
-watch(measurementUnit, (u) => {
-  manualMeasurements.unit = u
-})
+watch(measurementUnit, unit => convertMeasurements(manualMeasurements, unit), { flush: 'sync' })
 
 // Step 3: Fabric Handover Method
-const fabricDeliveryMethod = ref<'rider_pickup' | 'courier_by_customer' | 'shop_dropoff'>('rider_pickup')
+const fabricDeliveryMethod = 'courier_by_customer'
 
 // Validation before step transition
 const step1Valid = computed(() => selectedServiceId.value !== null)
-const step2Valid = computed(() => {
+const measurementError = ref('')
+const checkMeasurements = () => {
+  measurementError.value = ''
   if (measurementMode.value === 'sample') return true
-  // In manual mode, at least length, chest, or waist recommended
-  return true
-})
+  try {
+    const details = measurementPayload(manualMeasurements)
+    if (!details || !hasNumericMeasurements(details)) throw new Error('Enter a measurement, or choose to send a sample garment instead.')
+    return true
+  } catch (error) {
+    measurementError.value = error instanceof Error ? error.message : 'Check the measurements you entered.'
+    return false
+  }
+}
 
 const goToStep = (step: number) => {
   if (step === 2 && !step1Valid.value) return
-  if (step === 3 && !step2Valid.value) return
+  if (step === 3 && !checkMeasurements()) return
   currentStep.value = step
   if (typeof window !== 'undefined') {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -194,16 +209,12 @@ const formatPrice = (val: number) => 'Rs. ' + Number(val).toLocaleString('en-PK'
 
 // Finish Booking & Add to Bag
 const finalizeBooking = (proceedToCheckout = false) => {
-  if (!selectedServiceId.value) return
+  if (!selectedServiceId.value || !checkMeasurements()) return
 
   const measurementsPayload: CustomFittingMeasurements | null =
     measurementMode.value === 'manual'
       ? {
           ...manualMeasurements,
-          neck_style: neckStyle.value,
-          sleeve_style: sleeveStyle.value,
-          trouser_style: trouserStyle.value,
-          special_instructions: specialInstructions.value,
         }
       : null
 
@@ -212,7 +223,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
     serviceName: selectedServiceName.value,
     price: selectedServicePrice.value,
     estimatedDays: selectedServiceDays.value,
-    fabricDeliveryMethod: fabricDeliveryMethod.value,
+    fabricDeliveryMethod,
     designReferenceImage: designReferencePreview.value,
     neckStyle: neckStyle.value,
     sleeveStyle: sleeveStyle.value,
@@ -225,6 +236,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
   })
 
   if (proceedToCheckout) {
+    cart.closeCart()
     router.push('/checkout')
   }
 }
@@ -390,14 +402,15 @@ const finalizeBooking = (proceedToCheckout = false) => {
           <input
             ref="fileInputRef"
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             class="hidden"
             @change="handleFileUpload"
           >
 
-          <div
+          <button
             v-if="!designReferencePreview"
-            class="border-2 border-dashed border-brand-border hover:border-brand-gold bg-brand-cream/30 p-8 text-center cursor-pointer transition-colors"
+            type="button"
+            class="w-full border-2 border-dashed border-brand-border hover:border-brand-gold bg-brand-cream/30 p-8 text-center cursor-pointer transition-colors"
             @click="triggerFileInput"
           >
             <div class="w-10 h-10 mx-auto text-brand-gold mb-2">
@@ -409,9 +422,9 @@ const finalizeBooking = (proceedToCheckout = false) => {
               Click to upload design reference image
             </p>
             <p class="text-[10px] text-brand-muted mt-1">
-              Supports high-resolution photos up to 10MB
+              JPEG, PNG or WebP up to 5 MB. Not saved if you reload this page.
             </p>
-          </div>
+          </button>
 
           <div v-else class="relative w-48 aspect-[3/4] border border-brand-border overflow-hidden bg-brand-cream">
             <img
@@ -421,7 +434,8 @@ const finalizeBooking = (proceedToCheckout = false) => {
             >
             <button
               class="absolute top-2 right-2 p-1 bg-brand-charcoal/80 text-white hover:bg-red-600 transition-colors"
-              title="Remove image"
+              aria-label="Remove design reference image"
+              type="button"
               @click="removeReferenceImage"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -429,6 +443,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
               </svg>
             </button>
           </div>
+          <p v-if="referenceError" role="alert" class="mt-2 text-xs text-red-800">{{ referenceError }}</p>
         </div>
 
         <!-- Neck, Sleeve & Trouser Cut Selectors -->
@@ -491,6 +506,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
             </label>
             <textarea
               v-model="specialInstructions"
+              maxlength="930"
               rows="3"
               placeholder="e.g. Include contrast piping on neckline, add loops with fabric buttons, double lining for trousers..."
               class="w-full bg-white border border-brand-border p-3 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
@@ -579,14 +595,16 @@ const finalizeBooking = (proceedToCheckout = false) => {
               <button
                 class="px-4 py-1.5 font-medium transition-colors"
                 :class="[measurementUnit === 'inches' ? 'bg-brand-charcoal text-white' : 'text-brand-charcoal']"
-                @click="measurementUnit = 'inches'"
+                :aria-pressed="measurementUnit === 'inches'"
+                        @click="measurementUnit = 'inches'"
               >
                 Inches
               </button>
               <button
                 class="px-4 py-1.5 font-medium transition-colors"
                 :class="[measurementUnit === 'cm' ? 'bg-brand-charcoal text-white' : 'text-brand-charcoal']"
-                @click="measurementUnit = 'cm'"
+                :aria-pressed="measurementUnit === 'cm'"
+                        @click="measurementUnit = 'cm'"
               >
                 Centimeters
               </button>
@@ -600,81 +618,105 @@ const finalizeBooking = (proceedToCheckout = false) => {
             </h4>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <label class="text-[10px] uppercase text-brand-muted block mb-1">Shirt Length</label>
+                <label for="stitch-shirt-length" class="text-[10px] uppercase text-brand-muted block mb-1">Shirt Length</label>
                 <input
+                  id="stitch-shirt-length"
                   v-model.number="manualMeasurements.shirt_length"
                   type="number"
-                  step="0.5"
+                  min="0.01"
+                          max="300"
+                          step="0.01"
                   placeholder="e.g. 40"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
               </div>
               <div>
-                <label class="text-[10px] uppercase text-brand-muted block mb-1">Shoulder Width</label>
+                <label for="stitch-shoulder" class="text-[10px] uppercase text-brand-muted block mb-1">Shoulder Width</label>
                 <input
+                  id="stitch-shoulder"
                   v-model.number="manualMeasurements.shoulder"
                   type="number"
-                  step="0.5"
+                  min="0.01"
+                          max="300"
+                          step="0.01"
                   placeholder="e.g. 14.5"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
               </div>
               <div>
-                <label class="text-[10px] uppercase text-brand-muted block mb-1">Chest / Bust</label>
+                <label for="stitch-chest" class="text-[10px] uppercase text-brand-muted block mb-1">Chest / Bust</label>
                 <input
+                  id="stitch-chest"
                   v-model.number="manualMeasurements.chest"
                   type="number"
-                  step="0.5"
+                  min="0.01"
+                          max="300"
+                          step="0.01"
                   placeholder="e.g. 38"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
               </div>
               <div>
-                <label class="text-[10px] uppercase text-brand-muted block mb-1">Waist</label>
+                <label for="stitch-waist" class="text-[10px] uppercase text-brand-muted block mb-1">Waist</label>
                 <input
+                  id="stitch-waist"
                   v-model.number="manualMeasurements.waist"
                   type="number"
-                  step="0.5"
+                  min="0.01"
+                          max="300"
+                          step="0.01"
                   placeholder="e.g. 34"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
               </div>
               <div>
-                <label class="text-[10px] uppercase text-brand-muted block mb-1">Hips</label>
+                <label for="stitch-hips" class="text-[10px] uppercase text-brand-muted block mb-1">Hips</label>
                 <input
+                  id="stitch-hips"
                   v-model.number="manualMeasurements.hips"
                   type="number"
-                  step="0.5"
+                  min="0.01"
+                          max="300"
+                          step="0.01"
                   placeholder="e.g. 42"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
               </div>
               <div>
-                <label class="text-[10px] uppercase text-brand-muted block mb-1">Sleeve Length</label>
+                <label for="stitch-sleeve-length" class="text-[10px] uppercase text-brand-muted block mb-1">Sleeve Length</label>
                 <input
+                  id="stitch-sleeve-length"
                   v-model.number="manualMeasurements.sleeve_length"
                   type="number"
-                  step="0.5"
+                  min="0.01"
+                          max="300"
+                          step="0.01"
                   placeholder="e.g. 21"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
               </div>
               <div>
-                <label class="text-[10px] uppercase text-brand-muted block mb-1">Armhole</label>
+                <label for="stitch-armhole" class="text-[10px] uppercase text-brand-muted block mb-1">Armhole</label>
                 <input
+                  id="stitch-armhole"
                   v-model.number="manualMeasurements.armhole"
                   type="number"
-                  step="0.5"
+                  min="0.01"
+                          max="300"
+                          step="0.01"
                   placeholder="e.g. 8.5"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
               </div>
               <div>
-                <label class="text-[10px] uppercase text-brand-muted block mb-1">Daman (Flair)</label>
+                <label for="stitch-daman" class="text-[10px] uppercase text-brand-muted block mb-1">Daman (Flair)</label>
                 <input
+                  id="stitch-daman"
                   v-model.number="manualMeasurements.daman"
                   type="number"
-                  step="0.5"
+                  min="0.01"
+                          max="300"
+                          step="0.01"
                   placeholder="e.g. 24"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
@@ -689,31 +731,40 @@ const finalizeBooking = (proceedToCheckout = false) => {
             </h4>
             <div class="grid grid-cols-3 gap-4">
               <div>
-                <label class="text-[10px] uppercase text-brand-muted block mb-1">Trouser Length</label>
+                <label for="stitch-trouser-length" class="text-[10px] uppercase text-brand-muted block mb-1">Trouser Length</label>
                 <input
+                  id="stitch-trouser-length"
                   v-model.number="manualMeasurements.trouser_length"
                   type="number"
-                  step="0.5"
+                  min="0.01"
+                          max="300"
+                          step="0.01"
                   placeholder="e.g. 38"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
               </div>
               <div>
-                <label class="text-[10px] uppercase text-brand-muted block mb-1">Trouser Waist</label>
+                <label for="stitch-trouser-waist" class="text-[10px] uppercase text-brand-muted block mb-1">Trouser Waist</label>
                 <input
+                  id="stitch-trouser-waist"
                   v-model.number="manualMeasurements.trouser_waist"
                   type="number"
-                  step="0.5"
+                  min="0.01"
+                          max="300"
+                          step="0.01"
                   placeholder="e.g. 32"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
               </div>
               <div>
-                <label class="text-[10px] uppercase text-brand-muted block mb-1">Pancha / Opening</label>
+                <label for="stitch-pancha" class="text-[10px] uppercase text-brand-muted block mb-1">Pancha / Opening</label>
                 <input
+                  id="stitch-pancha"
                   v-model.number="manualMeasurements.pancha"
                   type="number"
-                  step="0.5"
+                  min="0.01"
+                          max="300"
+                          step="0.01"
                   placeholder="e.g. 6.5"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
@@ -741,6 +792,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
           </ul>
         </div>
 
+        <p v-if="measurementError" role="alert" class="text-red-800">{{ measurementError }}</p>
         <!-- Navigation Buttons -->
         <div class="pt-6 border-t border-brand-border flex items-center justify-between">
           <button
@@ -765,69 +817,9 @@ const finalizeBooking = (proceedToCheckout = false) => {
           <h2 class="font-serif text-lg sm:text-xl font-bold uppercase tracking-luxury text-brand-charcoal mb-4">
             Fabric Delivery Method
           </h2>
-          <div class="space-y-3">
-            <!-- Option 1: Rider Pickup -->
-            <label
-              class="border p-4 flex items-start space-x-3 cursor-pointer transition-colors block"
-              :class="[fabricDeliveryMethod === 'rider_pickup' ? 'border-brand-charcoal bg-brand-cream/60' : 'border-brand-border bg-white']"
-            >
-              <input
-                v-model="fabricDeliveryMethod"
-                type="radio"
-                value="rider_pickup"
-                class="mt-1 accent-brand-charcoal"
-              >
-              <div>
-                <span class="text-xs font-bold uppercase tracking-luxury text-brand-charcoal block">
-                  Local Rider Pickup (Recommended)
-                </span>
-                <span class="text-xs text-brand-muted">
-                  Our rider collects your unstitched fabric (and optional sample suit) from your doorstep. Available in Lahore, Karachi, and Islamabad.
-                </span>
-              </div>
-            </label>
-
-            <!-- Option 2: Courier by Customer -->
-            <label
-              class="border p-4 flex items-start space-x-3 cursor-pointer transition-colors block"
-              :class="[fabricDeliveryMethod === 'courier_by_customer' ? 'border-brand-charcoal bg-brand-cream/60' : 'border-brand-border bg-white']"
-            >
-              <input
-                v-model="fabricDeliveryMethod"
-                type="radio"
-                value="courier_by_customer"
-                class="mt-1 accent-brand-charcoal"
-              >
-              <div>
-                <span class="text-xs font-bold uppercase tracking-luxury text-brand-charcoal block">
-                  Send via Courier (TCS / Leopard / Trax)
-                </span>
-                <span class="text-xs text-brand-muted">
-                  Book and dispatch your parcel to our Lahore Design Atelier. Address provided upon checkout.
-                </span>
-              </div>
-            </label>
-
-            <!-- Option 3: Shop Dropoff -->
-            <label
-              class="border p-4 flex items-start space-x-3 cursor-pointer transition-colors block"
-              :class="[fabricDeliveryMethod === 'shop_dropoff' ? 'border-brand-charcoal bg-brand-cream/60' : 'border-brand-border bg-white']"
-            >
-              <input
-                v-model="fabricDeliveryMethod"
-                type="radio"
-                value="shop_dropoff"
-                class="mt-1 accent-brand-charcoal"
-              >
-              <div>
-                <span class="text-xs font-bold uppercase tracking-luxury text-brand-charcoal block">
-                  Atelier Drop-off
-                </span>
-                <span class="text-xs text-brand-muted">
-                  Drop off your fabric personally at our studio in Gulberg III, Lahore (Mon–Sat, 10am–8pm).
-                </span>
-              </div>
-            </label>
+          <div class="border border-brand-border p-4">
+            <p class="font-semibold">Send fabric by courier</p>
+            <p>Wait for the atelier to confirm the shipping address and handover instructions before sending any fabric or sample garment.</p>
           </div>
         </div>
 
@@ -866,7 +858,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
           <!-- Total Stitching Fee -->
           <div class="pt-4 border-t border-brand-border flex items-baseline justify-between">
             <span class="font-serif text-base font-bold text-brand-charcoal uppercase tracking-luxury">
-              Total Stitching Fee
+              Estimated Stitching Fee
             </span>
             <span class="font-serif text-2xl font-bold text-brand-charcoal">
               {{ formatPrice(selectedServicePrice) }}
@@ -874,7 +866,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
           </div>
         </div>
 
-        <!-- Gold-Bordered 50% Advance Notice (#B89B5E) -->
+        <!-- Advance notice -->
         <div class="border border-brand-gold bg-brand-cream p-5 text-xs text-brand-charcoal leading-relaxed flex items-start space-x-3">
           <div class="text-brand-gold shrink-0 mt-0.5">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -886,7 +878,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
               Advance Payment Policy for Atelier Stitching
             </strong>
             <span>
-              Custom stitching orders require a <strong class="text-brand-gold">50% advance deposit</strong> via JazzCash, EasyPaisa, or Bank Transfer to begin cutting at our atelier. The remaining 50% is payable via Cash on Delivery when your tailored suit arrives.
+              Checkout will show your advance and which payment method is available. Tailoring starts after the atelier verifies the advance and receives your fabric.
             </span>
           </div>
         </div>
@@ -919,3 +911,6 @@ const finalizeBooking = (proceedToCheckout = false) => {
     </div>
   </div>
 </template>
+<style scoped>
+:where(input, textarea, select, button, a):focus-visible { outline: 2px solid #202020; outline-offset: 3px; }
+</style>

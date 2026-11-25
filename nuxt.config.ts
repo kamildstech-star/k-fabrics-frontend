@@ -2,38 +2,33 @@
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: false },
+  // Keep the existing root-level pages, components and stores on Nuxt 4.
+  srcDir: '.',
 
-  css: ['~/assets/css/main.css'],
+  css: [
+    '@fontsource-variable/playfair-display',
+    '@fontsource-variable/plus-jakarta-sans',
+    '~/assets/css/main.css',
+  ],
 
   modules: [
     '@nuxtjs/tailwindcss',
-    '@nuxtjs/google-fonts',
     '@nuxt/image',
     '@pinia/nuxt',
   ],
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1',
-      metaPixelId: process.env.NUXT_PUBLIC_META_PIXEL_ID || '',
-      tiktokPixelId: process.env.NUXT_PUBLIC_TIKTOK_PIXEL_ID || '',
-      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://kfabrics.com',
+      apiBase: 'http://localhost:8000/api/v1',
+      siteUrl: 'https://kfabrics.com',
+      supportEmail: '',
+      supportWhatsapp: '',
     },
-  },
-
-  googleFonts: {
-    families: {
-      'Playfair+Display': [400, 500, 600, 700],
-      'Plus+Jakarta+Sans': [300, 400, 500, 600, 700],
-    },
-    display: 'swap',
   },
 
   image: {
     domains: [
       'images.unsplash.com',
-      'localhost',
-      '127.0.0.1',
     ],
   },
 

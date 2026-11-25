@@ -9,6 +9,8 @@ const wishlist = useWishlistStore()
 
 const mobileMenuOpen = ref(false)
 const searchOpen = ref(false)
+const { whatsapp } = useStoreContact()
+const chatUrl = computed(() => whatsapp())
 </script>
 
 <template>
@@ -247,14 +249,15 @@ const searchOpen = ref(false)
         </div>
 
         <!-- Mobile Footer Contact -->
-        <div class="pt-6 border-t border-brand-border text-xs text-brand-muted space-y-2">
+        <div v-if="chatUrl" class="pt-6 border-t border-brand-border text-xs text-brand-muted space-y-2">
           <p>Assistance & Styling Advice:</p>
           <a
-            href="https://wa.me/923001234567"
+            :href="chatUrl"
             target="_blank"
+            rel="noopener noreferrer"
             class="flex items-center space-x-2 text-brand-charcoal font-medium hover:text-brand-gold"
           >
-            <span>WhatsApp: +92 300 1234567</span>
+            <span>Chat on WhatsApp</span>
           </a>
         </div>
       </div>

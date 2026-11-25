@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useCartStore } from '~/stores/cart'
 import { useWishlistStore } from '~/stores/wishlist'
-import { useTracking } from '~/composables/useTracking'
 
 const props = defineProps<{
   product: {
@@ -18,7 +17,9 @@ const props = defineProps<{
     variants?: Array<{
       id: number
       size: string
+      color?: string | null
       stock_quantity: number
+      price_override?: number | null
       is_active: boolean
     }>
   }
@@ -26,32 +27,28 @@ const props = defineProps<{
 
 const cart = useCartStore()
 const wishlist = useWishlistStore()
-const { trackAddToCart } = useTracking()
 
 const isInWishlist = computed(() => wishlist.isInWishlist(props.product.id))
 
-const toggleWishlist = (e: Event) => {
-  e.preventDefault()
-  e.stopPropagation()
-  wishlist.toggle(props.product as any)
+const toggleWishlist = () => {
+  wishlist.toggle(props.product)
 }
 
 const formatPrice = (amount: number) => {
   return 'Rs. ' + Number(amount).toLocaleString('en-PK')
 }
 
-const availableSizes = computed(() => {
-  if (!props.product.variants) return []
-  return props.product.variants
-    .filter(v => v.is_active && v.stock_quantity > 0)
-    .map(v => v.size)
-})
+const readyVariants = computed(() => (props.product.variants || []).filter(
+  v => v.is_active && v.stock_quantity > 0 && v.size !== 'Custom',
+))
+const availableSizes = computed(() => [...new Set(readyVariants.value.map(v => v.size))])
 
-const quickAddSize = (size: string, event: Event) => {
-  event.preventDefault()
-  event.stopPropagation()
+const variantCountForSize = (size: string) => readyVariants.value.filter(v => v.size === size).length
 
-  const variant = props.product.variants?.find(v => v.size === size && v.is_active)
+const quickAddSize = (size: string) => {
+  const variants = readyVariants.value.filter(v => v.size === size)
+  if (variants.length > 1) return navigateTo(`/products/${props.product.slug}`)
+  const variant = variants[0]
   if (!variant) return
 
   cart.addProduct({
@@ -60,28 +57,49 @@ const quickAddSize = (size: string, event: Event) => {
     name: props.product.name,
     slug: props.product.slug,
     size: variant.size,
-    price: props.product.sale_price ?? props.product.base_price,
+    color: variant.color || undefined,
+    price: variant.price_override ?? props.product.sale_price ?? props.product.base_price,
     image: props.product.primary_image,
     quantity: 1,
-  })
-
-  trackAddToCart({
-    productId: props.product.id,
-    name: props.product.name,
-    price: props.product.sale_price ?? props.product.base_price,
-    quantity: 1,
-    size: variant.size,
   })
 }
 </script>
 
 <template>
   <div class="group relative flex flex-col bg-brand-white">
-    <!-- Clickable Card Image Container -->
-    <NuxtLink
-      :to="`/products/${product.slug}`"
-      class="relative overflow-hidden aspect-[3/4] bg-brand-cream block"
-    >
+    <div class="relative overflow-hidden aspect-[3/4] bg-brand-cream">
+      <NuxtLink
+        :to="`/products/${product.slug}`"
+        :aria-label="`View ${product.name}`"
+        class="absolute inset-0 block focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-charcoal"
+      >
+        <!-- Primary Image -->
+        <ProductImage
+          v-if="product.primary_image"
+          :src="product.primary_image"
+          alt=""
+          class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out"
+          :width="480"
+          :height="640"
+          sizes="50vw md:33vw lg:25vw"
+        />
+        <div v-else class="absolute inset-0 flex items-center justify-center bg-brand-cream text-brand-muted text-xs">
+          No Image
+        </div>
+
+        <!-- Secondary Hover Image -->
+        <ProductImage
+          v-if="product.hover_image && product.hover_image !== product.primary_image"
+          :src="product.hover_image"
+          alt=""
+          class="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500 ease-in-out"
+          :width="480"
+          :height="640"
+          sizes="50vw md:33vw lg:25vw"
+        />
+
+      </NuxtLink>
+
       <!-- Badges -->
       <div class="absolute top-3 left-3 z-20 flex flex-col space-y-1">
         <span
@@ -103,6 +121,7 @@ const quickAddSize = (size: string, event: Event) => {
         type="button"
         class="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-brand-charcoal hover:text-brand-gold backdrop-blur-sm transition-all shadow-sm flex items-center justify-center group/btn"
         :aria-label="isInWishlist ? 'Remove from Wishlist' : 'Save to Wishlist'"
+        :aria-pressed="isInWishlist"
         :title="isInWishlist ? 'Saved in Wishlist' : 'Add to Wishlist'"
         @click="toggleWishlist"
       >
@@ -116,31 +135,12 @@ const quickAddSize = (size: string, event: Event) => {
         </svg>
       </button>
 
-      <!-- Primary Image -->
-      <img
-        v-if="product.primary_image"
-        :src="product.primary_image"
-        :alt="product.name"
-        class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out"
-        loading="lazy"
-      >
-      <div v-else class="absolute inset-0 flex items-center justify-center bg-brand-cream text-brand-muted text-xs">
-        No Image
-      </div>
-
-      <!-- Secondary Hover Image -->
-      <img
-        v-if="product.hover_image && product.hover_image !== product.primary_image"
-        :src="product.hover_image"
-        :alt="product.name + ' - Alternative view'"
-        class="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500 ease-in-out"
-        loading="lazy"
-      >
-
       <!-- Slide-Up Quick Size Selector / Action Bar -->
       <div
-        class="absolute bottom-0 inset-x-0 bg-brand-white/95 backdrop-blur-sm p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300 z-20 border-t border-brand-border"
-        @click.stop
+        v-if="availableSizes.length"
+        role="group"
+        :aria-label="`Quick add ${product.name}`"
+        class="absolute bottom-0 inset-x-0 z-20 border-t border-brand-border bg-brand-white/95 p-2 backdrop-blur-sm transition-transform duration-300 [@media(hover:hover)]:translate-y-full [@media(hover:hover)]:group-hover:translate-y-0 [@media(hover:hover)]:group-focus-within:translate-y-0"
       >
         <p class="text-[10px] uppercase tracking-luxury text-brand-muted text-center mb-1.5 font-medium">
           Quick Add
@@ -149,15 +149,16 @@ const quickAddSize = (size: string, event: Event) => {
           <button
             v-for="size in availableSizes"
             :key="size"
-            class="text-[10px] font-medium border border-brand-border hover:border-brand-charcoal hover:bg-brand-charcoal hover:text-white px-2 py-1 transition-colors min-w-[28px]"
-            :title="`Add size ${size} to bag`"
-            @click="quickAddSize(size, $event)"
+            type="button"
+            class="min-h-[28px] text-[10px] font-medium border border-brand-border hover:border-brand-charcoal hover:bg-brand-charcoal hover:text-white px-2 py-1 transition-colors min-w-[28px]"
+            :aria-label="variantCountForSize(size) > 1 ? `Choose options for size ${size}` : `Add size ${size} to bag`"
+            @click="quickAddSize(size)"
           >
             {{ size }}
           </button>
         </div>
       </div>
-    </NuxtLink>
+    </div>
 
     <!-- Product Text Meta -->
     <div class="pt-3 pb-1 flex flex-col">

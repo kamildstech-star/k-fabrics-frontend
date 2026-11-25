@@ -64,18 +64,20 @@ const handleRegister = async () => {
       </div>
 
       <!-- Error Alert -->
-      <div v-if="errorMsg" class="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 text-xs">
+      <div v-if="errorMsg" role="alert" class="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 text-xs">
         {{ errorMsg }}
       </div>
 
       <!-- Register Form -->
       <form class="space-y-4" @submit.prevent="handleRegister">
         <div>
-          <label class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
+          <label for="signup-name" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
             Full Name *
           </label>
           <input
+            id="signup-name"
             v-model="form.name"
+            autocomplete="name"
             type="text"
             required
             placeholder="e.g. Mahnoor Tariq"
@@ -84,11 +86,13 @@ const handleRegister = async () => {
         </div>
 
         <div>
-          <label class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
+          <label for="signup-email" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
             Email Address *
           </label>
           <input
+            id="signup-email"
             v-model="form.email"
+            autocomplete="email"
             type="email"
             required
             placeholder="e.g. mahnoor@example.com"
@@ -97,11 +101,13 @@ const handleRegister = async () => {
         </div>
 
         <div>
-          <label class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
+          <label for="signup-phone" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
             Phone Number (WhatsApp)
           </label>
           <input
+            id="signup-phone"
             v-model="form.phone"
+            autocomplete="tel"
             type="tel"
             placeholder="e.g. 0300 1234567"
             class="w-full bg-white border border-brand-border px-3.5 py-2.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
@@ -109,24 +115,30 @@ const handleRegister = async () => {
         </div>
 
         <div>
-          <label class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
+          <label for="signup-password" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
             Password *
           </label>
           <input
+            id="signup-password"
             v-model="form.password"
+            autocomplete="new-password"
             type="password"
             required
-            placeholder="Minimum 8 characters"
+            minlength="12"
+            maxlength="72"
+            placeholder="Minimum 12 characters"
             class="w-full bg-white border border-brand-border px-3.5 py-2.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
           >
         </div>
 
         <div>
-          <label class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
+          <label for="signup-password_confirmation" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
             Confirm Password *
           </label>
           <input
+            id="signup-password_confirmation"
             v-model="form.password_confirmation"
+            autocomplete="new-password"
             type="password"
             required
             placeholder="Re-type password"

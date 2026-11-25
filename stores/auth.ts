@@ -10,198 +10,110 @@ export interface UserProfile {
   created_at?: string
 }
 
-export const useAuthStore = defineStore('auth', {
-  state: () => ({
-    user: null as UserProfile | null,
-    token: null as string | null,
-    isLoading: false,
-    initialized: false,
-  }),
+type LoginInput = { email: string; password: string }
+type RegisterInput = LoginInput & { name: string; phone?: string; password_confirmation: string }
+type AuthResponse = { user: UserProfile; message: string }
 
-  getters: {
-    isAuthenticated: (state): boolean => Boolean(state.token && state.user),
-    userName: (state): string => state.user?.name || '',
-    userEmail: (state): string => state.user?.email || '',
-  },
+function authError(error: unknown, fallback: string): string {
+  const response = error as { data?: { errors?: Record<string, string[]>; message?: string }; message?: string }
+  return Object.values(response.data?.errors ?? {})[0]?.[0] ?? response.data?.message ?? response.message ?? fallback
+}
 
-  actions: {
-    async initAuth() {
-      if (this.initialized) return
+export const useAuthStore = defineStore('auth', () => {
+  const user = ref<UserProfile | null>(null)
+  const isLoading = ref(false)
+  const initialized = ref(false)
+  const isAuthenticated = computed(() => !!user.value)
+  const isLoggedIn = computed(() => !!user.value)
+  const userName = computed(() => user.value?.name ?? '')
+  const userEmail = computed(() => user.value?.email ?? '')
+  const apiFetch = useStorefrontApi()
 
-      const config = useRuntimeConfig()
-      const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
-      const tokenCookie = useCookie<string | null>('k_auth_token', {
-        maxAge: 60 * 60 * 24 * 30, // 30 days
-        sameSite: 'lax',
-      })
+  let initialization: Promise<void> | undefined
+  let sessionVersion = 0
 
-      let storedToken = tokenCookie.value
-      if (!storedToken && import.meta.client) {
-        storedToken = localStorage.getItem('k_auth_token')
+  async function fetchUser() {
+    const version = sessionVersion
+    try {
+      const response = await apiFetch<{ data: UserProfile }>('/user/me')
+      if (version === sessionVersion) user.value = response.data
+    } catch (error: unknown) {
+      if (version !== sessionVersion) return
+      if ((error as { statusCode?: number })?.statusCode === 401) {
+        if (user.value) useWishlistStore().resetForGuest()
+        user.value = null
+      } else {
+        throw error
       }
+    }
+  }
 
-      if (storedToken) {
-        this.token = storedToken
-        tokenCookie.value = storedToken
-        if (import.meta.client) {
-          localStorage.setItem('k_auth_token', storedToken)
-        }
-
-        try {
-          this.isLoading = true
-          const userRes = await $fetch<any>(`${apiBase}/user`, {
-            headers: {
-              Authorization: `Bearer ${storedToken}`,
-              Accept: 'application/json',
-            },
-          })
-          this.user = userRes.data || userRes
-        } catch (e: any) {
-          // Token is invalid or expired
-          this.token = null
-          this.user = null
-          tokenCookie.value = null
-          if (import.meta.client) {
-            localStorage.removeItem('k_auth_token')
-          }
-        } finally {
-          this.isLoading = false
-        }
-      }
-
-      this.initialized = true
-    },
-
-    async login(credentials: { email: string; password: string }) {
-      const config = useRuntimeConfig()
-      const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
-      const tokenCookie = useCookie<string | null>('k_auth_token', {
-        maxAge: 60 * 60 * 24 * 30,
-        sameSite: 'lax',
-      })
-
-      this.isLoading = true
+  async function initAuth() {
+    if (initialized.value || !import.meta.client) return
+    initialization ??= (async () => {
+      // Retire the pre-session credentials without reading/sending them.
+      document.cookie = 'k_auth_token=; Max-Age=0; path=/; SameSite=Lax'
       try {
-        const response = await $fetch<any>(`${apiBase}/login`, {
-          method: 'POST',
-          body: credentials,
-          headers: {
-            Accept: 'application/json',
-          },
-        })
-
-        this.token = response.token
-        this.user = response.user?.data || response.user
-
-        tokenCookie.value = response.token
-        if (import.meta.client) {
-          localStorage.setItem('k_auth_token', response.token)
-        }
-
-        // Sync wishlist
-        const wishlist = useWishlistStore()
-        wishlist.syncWithBackend()
-
-        return { success: true, message: response.message }
-      } catch (err: any) {
-        const message = err.data?.message || err.data?.errors?.email?.[0] || 'Invalid credentials.'
-        throw new Error(message)
-      } finally {
-        this.isLoading = false
-      }
-    },
-
-    async register(data: {
-      name: string
-      email: string
-      phone?: string
-      password: string
-      password_confirmation: string
-    }) {
-      const config = useRuntimeConfig()
-      const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
-      const tokenCookie = useCookie<string | null>('k_auth_token', {
-        maxAge: 60 * 60 * 24 * 30,
-        sameSite: 'lax',
-      })
-
-      this.isLoading = true
-      try {
-        const response = await $fetch<any>(`${apiBase}/register`, {
-          method: 'POST',
-          body: data,
-          headers: {
-            Accept: 'application/json',
-          },
-        })
-
-        this.token = response.token
-        this.user = response.user?.data || response.user
-
-        tokenCookie.value = response.token
-        if (import.meta.client) {
-          localStorage.setItem('k_auth_token', response.token)
-        }
-
-        // Sync wishlist
-        const wishlist = useWishlistStore()
-        wishlist.syncWithBackend()
-
-        return { success: true, message: response.message }
-      } catch (err: any) {
-        const firstErrorKey = err.data?.errors ? Object.keys(err.data.errors)[0] : null
-        const message = firstErrorKey
-          ? err.data.errors[firstErrorKey][0]
-          : err.data?.message || 'Registration failed.'
-        throw new Error(message)
-      } finally {
-        this.isLoading = false
-      }
-    },
-
-    async logout() {
-      const config = useRuntimeConfig()
-      const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
-      const tokenCookie = useCookie<string | null>('k_auth_token')
-
-      if (this.token) {
-        try {
-          await $fetch<any>(`${apiBase}/logout`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${this.token}`,
-              Accept: 'application/json',
-            },
-          })
-        } catch (e) {
-          // ignore error on logout
-        }
-      }
-
-      this.token = null
-      this.user = null
-      tokenCookie.value = null
-      if (import.meta.client) {
         localStorage.removeItem('k_auth_token')
-      }
-    },
-
-    async fetchUser() {
-      if (!this.token) return
-      const config = useRuntimeConfig()
-      const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
+        localStorage.removeItem('k_fabrics_wishlist_ids')
+        localStorage.removeItem('k_fabrics_wishlist_items')
+      } catch { /* Storage can be disabled by browser settings. */ }
 
       try {
-        const res = await $fetch<any>(`${apiBase}/user`, {
-          headers: {
-            Authorization: `Bearer ${this.token}`,
-            Accept: 'application/json',
-          },
-        })
-        this.user = res.data || res
-      } catch (e) {
-        this.logout()
+        await fetchUser()
+        initialized.value = true
+      } catch {
+        // Leave initialization retryable after connectivity is restored.
       }
-    },
-  },
+    })().finally(() => { initialization = undefined })
+    return initialization
+  }
+
+  async function startSession(endpoint: '/login' | '/register', data: LoginInput | RegisterInput) {
+    const version = ++sessionVersion
+    isLoading.value = true
+    try {
+      const response = await apiFetch<AuthResponse>(endpoint, { method: 'POST', body: data })
+      if (version !== sessionVersion) throw new Error('The session changed. Please try again.')
+      const previousUser = user.value
+      user.value = response.user
+      initialized.value = true
+      const wishlist = useWishlistStore()
+      if (previousUser && previousUser.id !== response.user.id) wishlist.resetForGuest()
+      void wishlist.syncWithBackend()
+      return { success: true, message: response.message }
+    } catch (error: unknown) {
+      throw new Error(authError(error, 'Unable to start your session. Please try again.'))
+    } finally {
+      if (version === sessionVersion) isLoading.value = false
+    }
+  }
+
+  function login(data: LoginInput) {
+    return startSession('/login', data)
+  }
+
+  function register(data: RegisterInput) {
+    return startSession('/register', data)
+  }
+
+  async function logout() {
+    const version = ++sessionVersion
+    isLoading.value = false
+    try {
+      await apiFetch('/logout', { method: 'POST' })
+    } catch (error: unknown) {
+      if ((error as { statusCode?: number })?.statusCode !== 401) {
+        throw new Error('Could not sign out. Check your connection and try again.')
+      }
+    }
+    if (version !== sessionVersion) return
+    user.value = null
+    useWishlistStore().resetForGuest()
+  }
+
+  return {
+    user, isLoading, initialized, isAuthenticated, isLoggedIn, userName, userEmail,
+    apiFetch, initAuth, fetchUser, login, register, logout,
+  }
 })
