@@ -102,31 +102,31 @@ onBeforeUnmount(stopSearch)
       <div v-if="modelValue">
           <div class="mx-auto max-w-4xl px-4 sm:px-6 py-5 space-y-4">
             <div class="flex items-center justify-between gap-2">
-              <h2 id="search-dialog-title" class="font-serif text-xl font-bold">Search the collection</h2>
-              <button type="button" aria-label="Close search" class="search-button" @click="close">Close</button>
+              <h2 id="search-dialog-title" class="font-serif text-xl font-bold">{{ $tr("Search the collection") }}</h2>
+              <button type="button" :aria-label="$tr('Close search')" class="search-button" @click="close">{{ $tr("Close") }}</button>
             </div>
 
             <form class="space-y-2" role="search" @submit.prevent="submitSearch">
-              <label for="global-catalog-search" class="block font-semibold text-sm">Product search</label>
+              <label for="global-catalog-search" class="block font-semibold text-sm">{{ $tr("Product search") }}</label>
               <div class="flex flex-wrap gap-2">
                 <input id="global-catalog-search" ref="searchInput" v-model="query" type="search" :maxlength="searchMaxLength"
-                  placeholder="Try a product, fabric or color" autocomplete="off" class="grow w-full sm:w-auto sm:min-w-0 px-3 py-2 border border-brand-border bg-white"
+                  :placeholder="$tr('Try a product, fabric or color')" autocomplete="off" class="grow w-full sm:w-auto sm:min-w-0 px-3 py-2 border border-brand-border bg-white"
                   aria-describedby="global-search-help" data-dialog-initial-focus>
-                <button type="submit" class="search-primary" :disabled="!canSearch">Search</button>
-                <button v-if="query" type="button" class="search-button" @click="clearSearch">Clear</button>
+                <button type="submit" class="search-primary" :disabled="!canSearch">{{ $tr("Search") }}</button>
+                <button v-if="query" type="button" class="search-button" @click="clearSearch">{{ $tr("Clear") }}</button>
               </div>
-              <p id="global-search-help" class="text-sm text-brand-muted">Enter at least two characters to search.</p>
+              <p id="global-search-help" class="text-sm text-brand-muted">{{ $tr("Enter at least two characters to search.") }}</p>
             </form>
 
             <div :aria-busy="status === 'pending'" class="space-y-3">
-              <p v-if="status === 'pending'" class="text-sm" role="status">Looking for products…</p>
+              <p v-if="status === 'pending'" class="text-sm" role="status">{{ $tr("Looking for products…") }}</p>
               <div v-else-if="status === 'error'" role="alert" class="space-y-2 text-red-800">
-                <p>Suggestions are temporarily unavailable. You can retry or search the full collection.</p>
-                <button type="button" class="search-button" @click="searchSuggestions(true)">Retry suggestions</button>
+                <p>{{ $tr("Suggestions are temporarily unavailable. You can retry or search the full collection.") }}</p>
+                <button type="button" class="search-button" @click="searchSuggestions(true)">{{ $tr("Retry suggestions") }}</button>
               </div>
-              <p v-else-if="status === 'empty'" role="status" class="text-sm">No products match “{{ term }}”. Try a different product, fabric, or color.</p>
+              <p v-else-if="status === 'empty'" role="status" class="text-sm">{{ $tr("No products match “{query}”. Try a different product, fabric, or color.", { query: term }) }}</p>
               <template v-else-if="status === 'success'">
-                <p role="status" class="text-sm">{{ results.length }} quick {{ results.length === 1 ? 'match' : 'matches' }}</p>
+                <p role="status" class="text-sm">{{ $tr(results.length === 1 ? "{count} quick match" : "{count} quick matches", { count: results.length }) }}</p>
                 <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                   <li v-for="item in results" :key="item.id" class="min-w-0">
                     <NuxtLink :to="`/products/${encodeURIComponent(item.slug)}`" class="flex items-center gap-3 min-w-0 border border-brand-border bg-brand-cream/30 p-2 hover:border-brand-charcoal" @click="close">
@@ -138,7 +138,7 @@ onBeforeUnmount(stopSearch)
                     </NuxtLink>
                   </li>
                 </ul>
-                <NuxtLink :to="{ path: '/shop', query: { search: term } }" class="inline-block underline font-semibold" @click="close">View all search results</NuxtLink>
+                <NuxtLink :to="{ path: '/shop', query: { search: term } }" class="inline-block underline font-semibold" @click="close">{{ $tr("View all search results") }}</NuxtLink>
               </template>
             </div>
           </div>

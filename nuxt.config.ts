@@ -8,6 +8,7 @@ export default defineNuxtConfig({
   css: [
     '@fontsource-variable/playfair-display',
     '@fontsource-variable/plus-jakarta-sans',
+    '@fontsource-variable/noto-sans-arabic',
     '~/assets/css/main.css',
   ],
 
@@ -35,7 +36,6 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      htmlAttrs: { lang: 'en-PK' },
       title: 'K. Fabrics | Minimalist Luxury Ladies Clothing & Custom Fitting',
       meta: [
         { charset: 'utf-8' },

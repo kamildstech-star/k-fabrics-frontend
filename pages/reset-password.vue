@@ -56,31 +56,31 @@ async function resetPassword() {
 <template>
   <div class="mx-auto max-w-lg px-5 py-12">
     <section class="space-y-5 border border-brand-border bg-brand-cream/40 p-5 sm:p-8">
-      <h1 class="font-serif text-3xl font-bold">Reset your password</h1>
-      <p v-if="submitted" role="status">Your password has been reset. <NuxtLink class="underline font-semibold" to="/login">Sign in with your new password</NuxtLink>.</p>
+      <h1 class="font-serif text-3xl font-bold">{{ $tr("Reset your password") }}</h1>
+      <p v-if="submitted" role="status">{{ $tr("Your password has been reset.") }} <NuxtLink class="underline font-semibold" to="/login">{{ $tr("Sign in with your new password") }}</NuxtLink>.</p>
       <form v-else class="space-y-4" @submit.prevent="resetPassword">
-        <p>Enter your account email and the private code from your K. Fabrics email.</p>
+        <p>{{ $tr("Enter your account email and the private code from your K. Fabrics email.") }}</p>
         <div>
-          <label for="reset-email" class="block font-semibold">Account email</label>
-          <input id="reset-email" v-model="form.email" class="w-full border border-brand-border bg-white p-3" type="email" autocomplete="username" maxlength="255" required>
+          <label for="reset-email" class="block font-semibold">{{ $tr("Account email") }}</label>
+          <input dir="ltr" id="reset-email" v-model="form.email" class="w-full border border-brand-border bg-white p-3" type="email" autocomplete="username" maxlength="255" required>
         </div>
         <div>
-          <label for="reset-code" class="block font-semibold">Reset code</label>
-          <input id="reset-code" v-model="form.code" class="w-full border border-brand-border bg-white p-3 font-mono" type="text" autocomplete="one-time-code" autocapitalize="off" spellcheck="false" maxlength="128" required>
+          <label for="reset-code" class="block font-semibold">{{ $tr("Reset code") }}</label>
+          <input dir="ltr" id="reset-code" v-model="form.code" class="w-full border border-brand-border bg-white p-3 font-mono" type="text" autocomplete="one-time-code" autocapitalize="off" spellcheck="false" maxlength="128" required>
         </div>
         <div>
-          <label for="new-password" class="block font-semibold">New password</label>
-          <p id="new-password-hint" class="text-sm">Use at least 12 characters.</p>
-          <input id="new-password" v-model="form.password" class="w-full border border-brand-border bg-white p-3" type="password" autocomplete="new-password" minlength="12" maxlength="72" aria-describedby="new-password-hint" required>
+          <label for="new-password" class="block font-semibold">{{ $tr("New password") }}</label>
+          <p id="new-password-hint" class="text-sm">{{ $tr("Use at least 12 characters.") }}</p>
+          <input dir="ltr" id="new-password" v-model="form.password" class="w-full border border-brand-border bg-white p-3" type="password" autocomplete="new-password" minlength="12" maxlength="72" aria-describedby="new-password-hint" required>
         </div>
         <div>
-          <label for="new-password-confirmation" class="block font-semibold">Confirm new password</label>
-          <input id="new-password-confirmation" v-model="form.password_confirmation" class="w-full border border-brand-border bg-white p-3" type="password" autocomplete="new-password" minlength="12" maxlength="72" required>
+          <label for="new-password-confirmation" class="block font-semibold">{{ $tr("Confirm new password") }}</label>
+          <input dir="ltr" id="new-password-confirmation" v-model="form.password_confirmation" class="w-full border border-brand-border bg-white p-3" type="password" autocomplete="new-password" minlength="12" maxlength="72" required>
         </div>
-        <p v-if="error" role="alert" class="text-red-800">{{ error }}</p>
-        <button class="bg-brand-charcoal px-4 py-3 font-semibold text-white disabled:opacity-50" :disabled="busy" type="submit">{{ busy ? 'Resetting…' : 'Reset password' }}</button>
+        <p v-if="error" role="alert" class="text-red-800">{{ $tr(error) }}</p>
+        <button class="bg-brand-charcoal px-4 py-3 font-semibold text-white disabled:opacity-50" :disabled="busy" type="submit">{{ busy ? $tr("Resetting…") : $tr("Reset password") }}</button>
       </form>
-      <p v-if="!submitted"><NuxtLink class="underline font-semibold" to="/forgot-password">Request a new code</NuxtLink> · <NuxtLink class="underline" to="/login">Back to sign in</NuxtLink></p>
+      <p v-if="!submitted"><NuxtLink class="underline font-semibold" to="/forgot-password">{{ $tr("Request a new code") }}</NuxtLink> · <NuxtLink class="underline" to="/login">{{ $tr("Back to sign in") }}</NuxtLink></p>
       <RecoverySupport />
     </section>
   </div>

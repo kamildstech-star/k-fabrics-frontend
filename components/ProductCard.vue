@@ -70,7 +70,7 @@ const quickAddSize = (size: string) => {
     <div class="relative overflow-hidden aspect-[3/4] bg-brand-cream">
       <NuxtLink
         :to="`/products/${product.slug}`"
-        :aria-label="`View ${product.name}`"
+        :aria-label="$tr('View {arg0}', { arg0: product.name })"
         class="absolute inset-0 block focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-charcoal"
       >
         <!-- Primary Image -->
@@ -84,7 +84,7 @@ const quickAddSize = (size: string) => {
           sizes="50vw md:33vw lg:25vw"
         />
         <div v-else class="absolute inset-0 flex items-center justify-center bg-brand-cream text-brand-muted text-xs">
-          No Image
+          {{ $tr("No Image") }}
         </div>
 
         <!-- Secondary Hover Image -->
@@ -101,28 +101,28 @@ const quickAddSize = (size: string) => {
       </NuxtLink>
 
       <!-- Badges -->
-      <div class="absolute top-3 left-3 z-20 flex flex-col space-y-1">
+      <div class="absolute top-3 start-3 z-20 flex flex-col space-y-1">
         <span
           v-if="product.sale_price"
           class="bg-brand-charcoal text-white text-[9px] uppercase tracking-luxury font-semibold px-2 py-0.5"
         >
-          Sale
+          {{ $tr("Sale") }}
         </span>
         <span
           v-if="product.is_featured"
           class="bg-brand-gold text-white text-[9px] uppercase tracking-luxury font-semibold px-2 py-0.5"
         >
-          Featured
+          {{ $tr("Featured") }}
         </span>
       </div>
 
       <!-- Luxury Wishlist Heart Button -->
       <button
         type="button"
-        class="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-brand-charcoal hover:text-brand-gold backdrop-blur-sm transition-all shadow-sm flex items-center justify-center group/btn"
-        :aria-label="isInWishlist ? 'Remove from Wishlist' : 'Save to Wishlist'"
+        class="absolute top-3 end-3 z-20 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-brand-charcoal hover:text-brand-gold backdrop-blur-sm transition-all shadow-sm flex items-center justify-center group/btn"
+        :aria-label="isInWishlist ? $tr('Remove from Wishlist') : $tr('Save to Wishlist')"
         :aria-pressed="isInWishlist"
-        :title="isInWishlist ? 'Saved in Wishlist' : 'Add to Wishlist'"
+        :title="isInWishlist ? $tr('Saved in Wishlist') : $tr('Add to Wishlist')"
         @click="toggleWishlist"
       >
         <svg
@@ -139,11 +139,11 @@ const quickAddSize = (size: string) => {
       <div
         v-if="availableSizes.length"
         role="group"
-        :aria-label="`Quick add ${product.name}`"
+        :aria-label="$tr('Quick add {arg0}', { arg0: product.name })"
         class="absolute bottom-0 inset-x-0 z-20 border-t border-brand-border bg-brand-white/95 p-2 backdrop-blur-sm transition-transform duration-300 [@media(hover:hover)]:translate-y-full [@media(hover:hover)]:group-hover:translate-y-0 [@media(hover:hover)]:group-focus-within:translate-y-0"
       >
         <p class="text-[10px] uppercase tracking-luxury text-brand-muted text-center mb-1.5 font-medium">
-          Quick Add
+          {{ $tr("Quick Add") }}
         </p>
         <div class="flex items-center justify-center gap-1.5 flex-wrap">
           <button
@@ -151,7 +151,7 @@ const quickAddSize = (size: string) => {
             :key="size"
             type="button"
             class="min-h-[28px] text-[10px] font-medium border border-brand-border hover:border-brand-charcoal hover:bg-brand-charcoal hover:text-white px-2 py-1 transition-colors min-w-[28px]"
-            :aria-label="variantCountForSize(size) > 1 ? `Choose options for size ${size}` : `Add size ${size} to bag`"
+            :aria-label="variantCountForSize(size) > 1 ? $tr('Choose options for size {arg0}', { arg0: size }) : $tr('Add size {arg0} to bag', { arg0: size })"
             @click="quickAddSize(size)"
           >
             {{ size }}
@@ -176,7 +176,7 @@ const quickAddSize = (size: string) => {
       </NuxtLink>
 
       <!-- Price -->
-      <div class="flex items-baseline space-x-2 text-xs">
+      <div class="flex items-baseline space-x-2 rtl:space-x-reverse text-xs">
         <span v-if="product.sale_price" class="font-medium text-brand-charcoal text-sm">
           {{ formatPrice(product.sale_price) }}
         </span>

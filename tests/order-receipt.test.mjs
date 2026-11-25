@@ -36,3 +36,14 @@ test('explicitly saved document puts the private code in text, not in a link or 
   assert.doesNotMatch(html, /href=|src=|<script|localStorage|sessionStorage/)
   assert.doesNotMatch(html, new RegExp(`track-order[^<]*${code}`))
 })
+
+test('Urdu receipts use RTL and keep private data and amounts unchanged', () => {
+  const code = 'f'.repeat(64)
+  const html = receiptDocument(receiptMarkup(receipt, code, 'https://shop.example.test/track-order', 'ur'), 'ur')
+  assert.match(html, /<html lang="ur-PK" dir="rtl">/)
+  assert.match(html, /نجی ٹریکنگ/)
+  assert.match(html, /PKR\s1,250\.00/)
+  assert.match(html, new RegExp(`class="kf-private-code">${code}</strong>`))
+  assert.match(html, /Fixture &lt;Lawn &amp; &quot;Silk&quot;&gt;/)
+  assert.doesNotMatch(html, /href=|src=|<script/)
+})

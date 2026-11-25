@@ -542,27 +542,27 @@ const productWhatsApp = computed(() => product.value
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
       </div>
-      <h1 class="font-serif text-2xl font-bold text-brand-charcoal mb-2">{{ notFound ? 'Item not found' : 'Could not load this item' }}</h1>
-      <p class="text-sm text-brand-muted mb-6">{{ notFound ? 'This item may no longer be available.' : 'Try again in a moment.' }}</p>
-      <button v-if="!notFound" type="button" class="inline-block px-5 py-3 mr-3 border border-brand-charcoal" @click="refresh()">Try again</button>
+      <h1 class="font-serif text-2xl font-bold text-brand-charcoal mb-2">{{ notFound ? $tr("Item not found") : $tr("Could not load this item") }}</h1>
+      <p class="text-sm text-brand-muted mb-6">{{ notFound ? $tr("This item may no longer be available.") : $tr("Try again in a moment.") }}</p>
+      <button v-if="!notFound" type="button" class="inline-block px-5 py-3 me-3 border border-brand-charcoal" @click="refresh()">{{ $tr("Try again") }}</button>
       <NuxtLink
         to="/shop"
         class="inline-block px-8 py-3.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury hover:bg-brand-gold transition-colors"
       >
-        Return to Shop
+        {{ $tr("Return to Shop") }}
       </NuxtLink>
     </div>
 
     <!-- Product Detail Container -->
     <div v-else class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-8 sm:pt-6 lg:py-12">
-      <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-brand-muted mb-2 lg:mb-8">
+      <nav :aria-label="$tr('Breadcrumb')" class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-brand-muted mb-2 lg:mb-8">
         <NuxtLink to="/shop" class="inline-flex items-center gap-1 min-h-9 hover:underline">
-          <span aria-hidden="true" class="lg:hidden">‹</span> Shop
+          <span aria-hidden="true" class="lg:hidden">‹</span> {{ $tr("Shop") }}
         </NuxtLink>
         <template v-if="product.category">
           <span aria-hidden="true">/</span>
           <NuxtLink :to="`/shop?category=${product.category.slug}`" class="inline-flex items-center min-h-9 hover:underline">
-            {{ product.category.name }}
+            {{ $tr(product.category.name) }}
           </NuxtLink>
         </template>
         <span aria-hidden="true" class="hidden lg:inline">/</span>
@@ -580,10 +580,10 @@ const productWhatsApp = computed(() => product.value
           <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1" aria-live="polite" aria-atomic="true">
             <span class="font-serif text-xl sm:text-3xl font-bold text-brand-charcoal">{{ formatPrice(finalUnitPrice) }}</span>
             <template v-if="product.sale_price != null && Number(product.sale_price) < Number(product.base_price) && activeVariant?.price_override == null && !isCustomFit">
-              <del class="text-brand-muted text-sm"><span class="sr-only">Original price </span>{{ formatPrice(product.base_price) }}</del>
-              <span class="bg-brand-charcoal text-white text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5">Sale</span>
+              <del class="text-brand-muted text-sm"><span class="sr-only">{{ $tr("Original price") }} </span>{{ formatPrice(product.base_price) }}</del>
+              <span class="bg-brand-charcoal text-white text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5">{{ $tr("Sale") }}</span>
             </template>
-            <span v-if="isCustomFit" class="text-xs text-brand-gold font-medium">Includes {{ formatPrice(customFitFee) }} custom fitting</span>
+            <span v-if="isCustomFit" class="text-xs text-brand-gold font-medium">{{ $tr("Includes") }} {{ formatPrice(customFitFee) }} {{ $tr("custom fitting") }}</span>
           </div>
         </header>
 
@@ -621,19 +621,19 @@ const productWhatsApp = computed(() => product.value
               >
                 <button
                   type="button" class="pointer-events-auto grid place-items-center min-w-11 min-h-11 bg-white/90 backdrop-blur-sm text-brand-charcoal hover:bg-white shadow"
-                  aria-label="Previous image"
+                  :aria-label="$tr('Previous image')"
                   @click="activeImageIndex = (activeImageIndex - 1 + gallery.length) % gallery.length"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg data-directional-icon class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
                 <button
                   type="button" class="pointer-events-auto grid place-items-center min-w-11 min-h-11 bg-white/90 backdrop-blur-sm text-brand-charcoal hover:bg-white shadow"
-                  aria-label="Next image"
+                  :aria-label="$tr('Next image')"
                   @click="activeImageIndex = (activeImageIndex + 1) % gallery.length"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg data-directional-icon class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
@@ -641,7 +641,7 @@ const productWhatsApp = computed(() => product.value
 
             </div>
             <p v-if="gallery.length > 1" aria-live="polite" aria-atomic="true" class="mt-1 text-center text-xs text-brand-muted">
-              Photo {{ activeImageIndex + 1 }} of {{ gallery.length }}
+              {{ $tr("Photo") }} {{ activeImageIndex + 1 }} {{ $tr("of") }} {{ gallery.length }}
             </p>
           </div>
         </div>
@@ -652,10 +652,10 @@ const productWhatsApp = computed(() => product.value
             <div v-if="availableColors.length > 1" class="space-y-1.5 lg:space-y-2.5">
               <div class="flex items-center justify-between">
                 <span class="text-xs uppercase tracking-luxury text-brand-charcoal font-medium">
-                  Color: <span class="font-semibold text-brand-charcoal">{{ selectedColor || 'Not specified' }}</span>
+                  {{ $tr("Color:") }} <span class="font-semibold text-brand-charcoal">{{ selectedColor || 'Not specified' }}</span>
                 </span>
               </div>
-              <div role="group" aria-label="Colour" class="flex flex-wrap items-center gap-2">
+              <div role="group" :aria-label="$tr('Colour')" class="flex flex-wrap items-center gap-2">
                 <button
                   v-for="item in availableColors"
                   :key="item.color"
@@ -666,8 +666,8 @@ const productWhatsApp = computed(() => product.value
                       ? 'border-brand-charcoal ring-2 ring-brand-charcoal/30'
                       : 'border-brand-border hover:border-brand-charcoal'
                   ]"
-                  :title="item.color || 'Colour not specified'"
-                  :aria-label="item.color || 'Colour not specified'"
+                  :title="item.color || $tr('Colour not specified')"
+                  :aria-label="item.color || $tr('Colour not specified')"
                   :aria-pressed="selectedColor === item.color"
                   @click="selectedColor = item.color"
                 >
@@ -683,19 +683,19 @@ const productWhatsApp = computed(() => product.value
             <div id="product-sizing" ref="sizeSelector" tabindex="-1" class="space-y-2 lg:space-y-3">
               <div class="flex items-center justify-between gap-2">
                 <span class="text-xs uppercase tracking-luxury text-brand-charcoal font-medium">
-                  {{ colorSizes.length ? 'Select size' : 'Sizing' }}
+                  {{ colorSizes.length ? $tr("Select size") : $tr("Sizing") }}
                 </span>
                 <button
                   type="button"
                   class="inline-flex items-center min-h-9 px-1 text-sm text-brand-charcoal underline underline-offset-4 hover:text-brand-gold transition-colors font-medium"
                   @click="sizeGuideOpen = true"
                 >
-                  Size Guide
+                  {{ $tr("Size Guide") }}
                 </button>
               </div>
 
               <!-- Sharp Size Boxes -->
-              <div v-if="colorSizes.length" role="group" aria-label="Select size" class="pdp-size-grid grid gap-1 lg:gap-2">
+              <div v-if="colorSizes.length" role="group" :aria-label="$tr('Select size')" class="pdp-size-grid grid gap-1 lg:gap-2">
                 <button
                   v-for="size in colorSizes"
                   data-size
@@ -718,22 +718,22 @@ const productWhatsApp = computed(() => product.value
                     class="text-[9px] leading-tight"
                     :class="[selectedSize === size && !isCustomFit ? 'text-amber-200' : 'text-amber-700 font-semibold']"
                   >
-                    Sold Out
+                    {{ $tr("Sold Out") }}
                   </span>
                 </button>
               </div>
 
-              <p v-if="!colorSizes.length && !customFitAvailable" role="status" class="text-sm">This item is currently unavailable.</p>
+              <p v-if="!colorSizes.length && !customFitAvailable" role="status" class="text-sm">{{ $tr("This item is currently unavailable.") }}</p>
               <p v-if="sizeError" role="alert" class="text-sm text-red-800 font-medium">
-                {{ customFitAvailable ? 'Select a size or choose Custom Fit.' : 'Select a size before adding to bag.' }}
+                {{ customFitAvailable ? $tr("Select a size or choose Custom Fit.") : $tr("Select a size before adding to bag.") }}
               </p>
             </div>
 
             <!-- Custom Fit Atelier Toggle -->
-            <p v-if="customVariant && !customFitAvailable" class="border border-brand-border p-4 bg-brand-cream/40 text-sm">Custom fitting is paused until verified bank-transfer payment is available. You can still choose an available ready-to-wear size.</p>
+            <p v-if="customVariant && !customFitAvailable" class="border border-brand-border p-4 bg-brand-cream/40 text-sm">{{ $tr("Custom fitting is paused until verified bank-transfer payment is available. You can still choose an available ready-to-wear size.") }}</p>
             <div v-if="customFitAvailable" class="border border-brand-border p-4 bg-brand-cream/40 transition-colors">
               <div class="flex items-start justify-between">
-                <div class="flex items-start space-x-3">
+                <div class="flex items-start space-x-3 rtl:space-x-reverse">
                   <input
                     id="custom-fit-checkbox"
                     v-model="isCustomFit"
@@ -743,14 +743,14 @@ const productWhatsApp = computed(() => product.value
                     @click.stop
                   >
                   <div>
-                    <label for="custom-fit-checkbox" class="font-serif text-sm font-bold text-brand-charcoal cursor-pointer flex items-center space-x-2">
-                      <span>Bespoke Custom Fit</span>
+                    <label for="custom-fit-checkbox" class="font-serif text-sm font-bold text-brand-charcoal cursor-pointer flex items-center space-x-2 rtl:space-x-reverse">
+                      <span>{{ $tr("Bespoke Custom Fit") }}</span>
                       <span class="text-[10px] font-sans font-semibold bg-brand-gold text-white px-2 py-0.5 tracking-luxury">
                         +{{ formatPrice(customFitFee) }}
                       </span>
                     </label>
                     <p class="text-xs text-brand-muted mt-0.5 leading-relaxed">
-                      Enter all shirt measurements and, for sets, trouser length and waist. Pancha and notes are optional. Unsent measurements are not saved when you reload.
+                      {{ $tr("Enter all shirt measurements and, for sets, trouser length and waist. Pancha and notes are optional. Unsent measurements are not saved when you reload.") }}
                     </p>
                   </div>
                 </div>
@@ -769,14 +769,14 @@ const productWhatsApp = computed(() => product.value
                   <!-- Saved Profile Quick-Fill (if logged in and has profiles) -->
                   <div v-if="savedProfiles.length > 0" class="bg-brand-white p-2.5 border border-brand-border/80">
                     <label class="text-[10px] uppercase tracking-luxury text-brand-gold font-bold block mb-1">
-                      Load Saved Measurement Profile
+                      {{ $tr("Load Saved Measurement Profile") }}
                     </label>
                     <select
                       v-model="selectedSavedProfileId"
                       class="w-full bg-brand-cream/60 border border-brand-border px-2.5 py-1.5 text-xs text-brand-charcoal focus:outline-none focus:border-brand-gold"
                       @change="selectedSavedProfileId && applySavedProfile(selectedSavedProfileId)"
                     >
-                      <option :value="null">-- Select a Profile --</option>
+                      <option :value="null">{{ $tr("-- Select a Profile --") }}</option>
                       <option v-for="prof in savedProfiles" :key="prof.id" :value="prof.id">
                         {{ prof.profile_name }} ({{ prof.unit }})
                       </option>
@@ -786,7 +786,7 @@ const productWhatsApp = computed(() => product.value
                   <!-- Measurement Unit Toggle -->
                   <div class="flex items-center justify-between">
                     <span class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold">
-                      Measurement Unit
+                      {{ $tr("Measurement Unit") }}
                     </span>
                     <div class="flex border border-brand-border bg-white text-xs">
                       <button
@@ -795,7 +795,7 @@ const productWhatsApp = computed(() => product.value
                         :aria-pressed="measurementUnit === 'inches'"
                         @click="measurementUnit = 'inches'"
                       >
-                        Inches
+                        {{ $tr("Inches") }}
                       </button>
                       <button
                         class="px-3 py-1 font-medium transition-colors"
@@ -803,7 +803,7 @@ const productWhatsApp = computed(() => product.value
                         :aria-pressed="measurementUnit === 'cm'"
                         @click="measurementUnit = 'cm'"
                       >
-                        Centimeters
+                        {{ $tr("Centimeters") }}
                       </button>
                     </div>
                   </div>
@@ -811,12 +811,12 @@ const productWhatsApp = computed(() => product.value
                   <!-- Shirt Fields -->
                   <div>
                     <p class="text-[10px] uppercase tracking-luxury text-brand-gold font-semibold mb-2">
-                      Shirt Specifications ({{ measurementUnit }})
+                      {{ $tr("Shirt Specifications (") }}{{ measurementUnit }})
                     </p>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                       <div>
-                        <label for="fit-shirt-length" class="text-[10px] uppercase text-brand-muted block mb-0.5">Length</label>
-                        <input
+                        <label for="fit-shirt-length" class="text-[10px] uppercase text-brand-muted block mb-0.5">{{ $tr("Length") }}</label>
+                        <input dir="ltr"
                           id="fit-shirt-length"
                           v-model.number="measurements.shirt_length"
                           type="number"
@@ -828,8 +828,8 @@ const productWhatsApp = computed(() => product.value
                         >
                       </div>
                       <div>
-                        <label for="fit-shoulder" class="text-[10px] uppercase text-brand-muted block mb-0.5">Shoulder</label>
-                        <input
+                        <label for="fit-shoulder" class="text-[10px] uppercase text-brand-muted block mb-0.5">{{ $tr("Shoulder") }}</label>
+                        <input dir="ltr"
                           id="fit-shoulder"
                           v-model.number="measurements.shoulder"
                           type="number"
@@ -841,8 +841,8 @@ const productWhatsApp = computed(() => product.value
                         >
                       </div>
                       <div>
-                        <label for="fit-chest" class="text-[10px] uppercase text-brand-muted block mb-0.5">Chest / Bust</label>
-                        <input
+                        <label for="fit-chest" class="text-[10px] uppercase text-brand-muted block mb-0.5">{{ $tr("Chest / Bust") }}</label>
+                        <input dir="ltr"
                           id="fit-chest"
                           v-model.number="measurements.chest"
                           type="number"
@@ -854,8 +854,8 @@ const productWhatsApp = computed(() => product.value
                         >
                       </div>
                       <div>
-                        <label for="fit-waist" class="text-[10px] uppercase text-brand-muted block mb-0.5">Waist</label>
-                        <input
+                        <label for="fit-waist" class="text-[10px] uppercase text-brand-muted block mb-0.5">{{ $tr("Waist") }}</label>
+                        <input dir="ltr"
                           id="fit-waist"
                           v-model.number="measurements.waist"
                           type="number"
@@ -867,8 +867,8 @@ const productWhatsApp = computed(() => product.value
                         >
                       </div>
                       <div>
-                        <label for="fit-hips" class="text-[10px] uppercase text-brand-muted block mb-0.5">Hips</label>
-                        <input
+                        <label for="fit-hips" class="text-[10px] uppercase text-brand-muted block mb-0.5">{{ $tr("Hips") }}</label>
+                        <input dir="ltr"
                           id="fit-hips"
                           v-model.number="measurements.hips"
                           type="number"
@@ -880,8 +880,8 @@ const productWhatsApp = computed(() => product.value
                         >
                       </div>
                       <div>
-                        <label for="fit-sleeve-length" class="text-[10px] uppercase text-brand-muted block mb-0.5">Sleeve</label>
-                        <input
+                        <label for="fit-sleeve-length" class="text-[10px] uppercase text-brand-muted block mb-0.5">{{ $tr("Sleeve") }}</label>
+                        <input dir="ltr"
                           id="fit-sleeve-length"
                           v-model.number="measurements.sleeve_length"
                           type="number"
@@ -898,12 +898,12 @@ const productWhatsApp = computed(() => product.value
                   <!-- Trouser Fields -->
                   <div v-if="includeTrousers">
                     <p class="text-[10px] uppercase tracking-luxury text-brand-gold font-semibold mb-2">
-                      Trouser / Shalwar ({{ measurementUnit }})
+                      {{ $tr("Trouser / Shalwar (") }}{{ measurementUnit }})
                     </p>
                     <div class="grid grid-cols-3 gap-2.5">
                       <div>
-                        <label for="fit-trouser-length" class="text-[10px] uppercase text-brand-muted block mb-0.5">Length</label>
-                        <input
+                        <label for="fit-trouser-length" class="text-[10px] uppercase text-brand-muted block mb-0.5">{{ $tr("Length") }}</label>
+                        <input dir="ltr"
                           id="fit-trouser-length"
                           v-model.number="measurements.trouser_length"
                           type="number"
@@ -915,8 +915,8 @@ const productWhatsApp = computed(() => product.value
                         >
                       </div>
                       <div>
-                        <label for="fit-trouser-waist" class="text-[10px] uppercase text-brand-muted block mb-0.5">Waist</label>
-                        <input
+                        <label for="fit-trouser-waist" class="text-[10px] uppercase text-brand-muted block mb-0.5">{{ $tr("Waist") }}</label>
+                        <input dir="ltr"
                           id="fit-trouser-waist"
                           v-model.number="measurements.trouser_waist"
                           type="number"
@@ -928,8 +928,8 @@ const productWhatsApp = computed(() => product.value
                         >
                       </div>
                       <div>
-                        <label for="fit-pancha" class="text-[10px] uppercase text-brand-muted block mb-0.5">Pancha</label>
-                        <input
+                        <label for="fit-pancha" class="text-[10px] uppercase text-brand-muted block mb-0.5">{{ $tr("Pancha") }}</label>
+                        <input dir="ltr"
                           id="fit-pancha"
                           v-model.number="measurements.pancha"
                           type="number"
@@ -945,12 +945,12 @@ const productWhatsApp = computed(() => product.value
 
                   <!-- Extra Notes -->
                   <div>
-                    <label for="fitting-notes" class="text-[10px] uppercase text-brand-muted block mb-1">Special Tailoring Instructions (optional)</label>
+                    <label for="fitting-notes" class="text-[10px] uppercase text-brand-muted block mb-1">{{ $tr("Special Tailoring Instructions (optional)") }}</label>
                     <textarea
                       id="fitting-notes"
                       v-model="measurements.special_instructions"
                       rows="2"
-                      placeholder="e.g. Boat neckline, bell sleeves, loose silhouette..."
+                      :placeholder="$tr('e.g. Boat neckline, bell sleeves, loose silhouette...')"
                       class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                     />
                   </div>
@@ -958,7 +958,7 @@ const productWhatsApp = computed(() => product.value
               </Transition>
             </div>
 
-            <p v-if="selectionError" role="alert" class="text-red-800">{{ selectionError }}</p>
+            <p v-if="selectionError" role="alert" class="text-red-800">{{ $tr(selectionError) }}</p>
 
             <!-- Actions: ADD TO BAG / NOTIFY ME & VERIFIED SUPPORT -->
             <div class="space-y-3 pt-2">
@@ -968,32 +968,32 @@ const productWhatsApp = computed(() => product.value
                 id="stock-alert-section"
                 class="p-4 bg-brand-cream border border-brand-border space-y-3 transition-all"
               >
-                <div class="flex items-center space-x-2 text-brand-charcoal">
+                <div class="flex items-center space-x-2 rtl:space-x-reverse text-brand-charcoal">
                   <svg class="w-4 h-4 text-brand-gold shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                   </svg>
                   <p class="text-xs font-semibold uppercase tracking-luxury text-brand-charcoal">
-                    Size {{ selectedSize }} is Currently Sold Out
+                    {{ $tr("Size") }} {{ selectedSize }} {{ $tr("is Currently Sold Out") }}
                   </p>
                 </div>
-                <p v-if="!restockAlertsEnabled" class="text-sm text-brand-muted">Choose another size or <NuxtLink to="/shop" class="underline">browse similar pieces</NuxtLink>.</p>
+                <p v-if="!restockAlertsEnabled" class="text-sm text-brand-muted">{{ $tr("Choose another size or") }} <NuxtLink to="/shop" class="underline">{{ $tr("browse similar pieces") }}</NuxtLink>.</p>
                 <p v-else class="text-sm text-brand-muted leading-relaxed">
-                  Leave your email so the store team can contact you about this size if it returns. This does not reserve stock.
+                  {{ $tr("Leave your email so the store team can contact you about this size if it returns. This does not reserve stock.") }}
                 </p>
 
-                <div v-if="restockAlertsEnabled && stockAlertSuccess" role="status" class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center space-x-2">
+                <div v-if="restockAlertsEnabled && stockAlertSuccess" role="status" class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center space-x-2 rtl:space-x-reverse">
                   <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                   </svg>
-                  <span>Request saved for the store team.</span>
+                  <span>{{ $tr("Request saved for the store team.") }}</span>
                 </div>
 
                 <form v-else-if="restockAlertsEnabled" class="flex flex-col sm:flex-row gap-2" @submit.prevent="handleStockAlert">
-                  <input
+                  <input dir="ltr"
                     v-model="stockAlertContact"
-                    aria-label="Email address for restock"
+                    :aria-label="$tr('Email address for restock')"
                     type="email" autocomplete="email" maxlength="254"
-                    placeholder="Email address"
+                    :placeholder="$tr('Email address')"
                     required
                     class="flex-1 min-w-0 bg-white border border-brand-border px-3 py-2.5 text-xs text-brand-charcoal placeholder-brand-muted focus:outline-none focus:border-brand-gold"
                   >
@@ -1002,24 +1002,24 @@ const productWhatsApp = computed(() => product.value
                     :disabled="stockAlertLoading"
                     class="px-5 py-2.5 bg-brand-charcoal hover:bg-brand-gold text-white text-xs uppercase tracking-luxury font-medium transition-colors disabled:opacity-50 shrink-0"
                   >
-                    {{ stockAlertLoading ? 'Saving…' : 'Request restock email' }}
+                    {{ stockAlertLoading ? $tr("Saving…") : $tr("Request restock email") }}
                   </button>
                 </form>
                 <p v-if="restockAlertsEnabled && stockAlertError" role="alert" class="text-sm text-red-800">
-                  {{ stockAlertError }}
+                  {{ $tr(stockAlertError) }}
                 </p>
               </div>
 
               <!-- Standard Add to Bag (When in stock) -->
               <button
                 v-else-if="colorSizes.length || customVariant"
-                class="w-full py-4 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors duration-300 shadow-md flex items-center justify-center space-x-2"
+                class="w-full py-4 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors duration-300 shadow-md flex items-center justify-center space-x-2 rtl:space-x-reverse"
                 @click="handleAddToCart"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
-                <span>{{ activeVariant ? 'Add to Bag' : 'Choose a size' }}</span>
+                <span>{{ activeVariant ? $tr("Add to Bag") : $tr("Choose a size") }}</span>
               </button>
 
               <a
@@ -1027,18 +1027,18 @@ const productWhatsApp = computed(() => product.value
                 :href="productWhatsApp"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="w-full py-3.5 border border-[#25D366] text-brand-charcoal hover:bg-[#25D366] hover:text-white text-xs uppercase tracking-luxury font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
+                class="w-full py-3.5 border border-[#25D366] text-brand-charcoal hover:bg-[#25D366] hover:text-white text-xs uppercase tracking-luxury font-medium transition-colors duration-200 flex items-center justify-center space-x-2 rtl:space-x-reverse"
               >
                 <svg class="w-4 h-4 fill-[#25D366] group-hover:fill-white" viewBox="0 0 24 24">
                   <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.592 2.654-.696c1.002.547 1.799.821 2.806.821h.005c3.18 0 5.767-2.586 5.768-5.766.001-3.182-2.585-5.77-5.773-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.69.058-1.12-.08-.415-.133-.94-.317-1.616-.615-1.396-.616-2.298-2.025-2.368-2.118-.07-.093-.568-.756-.568-1.442s.36-1.025.488-1.164c.129-.139.281-.174.375-.174s.188.005.27.009c.087.004.204-.033.319.245.12.289.41 1.002.446 1.075.036.073.06.158.01.255-.05.097-.075.158-.15.244-.075.086-.157.192-.224.258-.075.074-.153.155-.066.305.087.15.387.638.83 1.032.571.508 1.052.665 1.202.739.15.074.238.065.326-.036.088-.101.376-.438.476-.588.1-.15.2-.125.337-.074.137.051.874.412 1.024.487.15.075.25.112.287.175.037.063.037.367-.107.772zM12 2C6.477 2 2 6.477 2 12c0 1.891.526 3.66 1.439 5.174L2 22l4.981-1.306C8.423 21.547 10.15 22 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
                 </svg>
-                <span>Ask about this item on WhatsApp</span>
+                <span>{{ $tr("Ask about this item on WhatsApp") }}</span>
               </a>
 
               <!-- Save to Wishlist Toggle Button -->
               <button
                 type="button"
-                class="w-full py-3 border border-brand-border text-brand-charcoal hover:border-brand-charcoal text-xs uppercase tracking-luxury font-medium transition-colors flex items-center justify-center space-x-2"
+                class="w-full py-3 border border-brand-border text-brand-charcoal hover:border-brand-charcoal text-xs uppercase tracking-luxury font-medium transition-colors flex items-center justify-center space-x-2 rtl:space-x-reverse"
                 @click="handleToggleWishlist"
               >
                 <svg
@@ -1049,13 +1049,13 @@ const productWhatsApp = computed(() => product.value
                 >
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
-                <span>{{ isInWishlist ? 'Saved in Wishlist' : 'Add to Wishlist' }}</span>
+                <span>{{ isInWishlist ? $tr("Saved in Wishlist") : $tr("Add to Wishlist") }}</span>
               </button>
             </div>
 
             <div class="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-              <NuxtLink to="/policies/shipping" class="underline underline-offset-4">Delivery estimates</NuxtLink>
-              <NuxtLink to="/policies/returns" class="underline underline-offset-4">{{ isCustomFit ? 'Custom order policy' : 'Ready-to-wear returns and exchanges' }}</NuxtLink>
+              <NuxtLink to="/policies/shipping" class="underline underline-offset-4">{{ $tr("Delivery estimates") }}</NuxtLink>
+              <NuxtLink to="/policies/returns" class="underline underline-offset-4">{{ isCustomFit ? $tr("Custom order policy") : $tr("Ready-to-wear returns and exchanges") }}</NuxtLink>
             </div>
 
             <!-- Collapsible Luxury Accordions -->
@@ -1063,12 +1063,12 @@ const productWhatsApp = computed(() => product.value
               <!-- 1. Fabric & Product Details -->
               <div class="py-4">
                 <button
-                  class="w-full flex items-center justify-between text-left"
+                  class="w-full flex items-center justify-between text-start"
                   :aria-expanded="activeAccordions.details" aria-controls="pdp-details"
                   @click="toggleAccordion('details')"
                 >
                   <span class="font-serif text-sm font-semibold uppercase tracking-luxury text-brand-charcoal">
-                    Fabric & Product Details
+                    {{ $tr("Fabric & Product Details") }}
                   </span>
                   <span class="text-brand-charcoal font-serif text-lg leading-none">
                     {{ activeAccordions.details ? '−' : '+' }}
@@ -1076,11 +1076,11 @@ const productWhatsApp = computed(() => product.value
                 </button>
                 <div id="pdp-details" v-show="activeAccordions.details" class="pt-3 text-xs text-brand-muted leading-relaxed space-y-2">
                   <p>{{ product.description }}</p>
-                  <p v-if="product.fit_notes" class="whitespace-pre-line"><strong>Fit:</strong> {{ product.fit_notes }}</p>
-                  <ul class="list-disc pl-4 space-y-1 text-brand-charcoal">
-                    <li><strong class="font-medium">Fabric:</strong> {{ product.fabric_type }}</li>
-                    <li v-if="product.piece_type"><strong class="font-medium">Pieces:</strong> {{ product.piece_type }}</li>
-                    <li v-if="product.category"><strong class="font-medium">Category:</strong> {{ product.category.name }}</li>
+                  <p v-if="product.fit_notes" class="whitespace-pre-line"><strong>{{ $tr("Fit:") }}</strong> {{ product.fit_notes }}</p>
+                  <ul class="list-disc ps-4 space-y-1 text-brand-charcoal">
+                    <li><strong class="font-medium">{{ $tr("Fabric:") }}</strong> {{ product.fabric_type }}</li>
+                    <li v-if="product.piece_type"><strong class="font-medium">{{ $tr("Pieces:") }}</strong> {{ product.piece_type }}</li>
+                    <li v-if="product.category"><strong class="font-medium">{{ $tr("Category:") }}</strong> {{ $tr(product.category.name) }}</li>
                   </ul>
                 </div>
               </div>
@@ -1088,32 +1088,32 @@ const productWhatsApp = computed(() => product.value
               <!-- 2. Delivery & Exchange Policy -->
               <div class="py-4">
                 <button
-                  class="w-full flex items-center justify-between text-left"
+                  class="w-full flex items-center justify-between text-start"
                   :aria-expanded="activeAccordions.delivery" aria-controls="pdp-delivery"
                   @click="toggleAccordion('delivery')"
                 >
                   <span class="font-serif text-sm font-semibold uppercase tracking-luxury text-brand-charcoal">
-                    Delivery & Exchange Policy
+                    {{ $tr("Delivery & Exchange Policy") }}
                   </span>
                   <span class="text-brand-charcoal font-serif text-lg leading-none">
                     {{ activeAccordions.delivery ? '−' : '+' }}
                   </span>
                 </button>
                 <div id="pdp-delivery" v-show="activeAccordions.delivery" class="pt-3 text-xs text-brand-muted leading-relaxed space-y-2">
-                  <p>Check the <NuxtLink to="/policies/shipping" class="underline">delivery policy</NuxtLink> for estimated timing. Shipping and any tailoring advance are confirmed at checkout.</p>
-                  <p>See the <NuxtLink to="/policies/returns" class="underline">exchange policy</NuxtLink> for garment condition and custom-order eligibility.</p>
+                  <p>{{ $tr("Check the") }} <NuxtLink to="/policies/shipping" class="underline">{{ $tr("delivery policy") }}</NuxtLink> {{ $tr("for estimated timing. Shipping and any tailoring advance are confirmed at checkout.") }}</p>
+                  <p>{{ $tr("See the") }} <NuxtLink to="/policies/returns" class="underline">{{ $tr("exchange policy") }}</NuxtLink> {{ $tr("for garment condition and custom-order eligibility.") }}</p>
                 </div>
               </div>
 
               <!-- 3. Care Instructions -->
               <div class="py-4">
                 <button
-                  class="w-full flex items-center justify-between text-left"
+                  class="w-full flex items-center justify-between text-start"
                   :aria-expanded="activeAccordions.care" aria-controls="pdp-care"
                   @click="toggleAccordion('care')"
                 >
                   <span class="font-serif text-sm font-semibold uppercase tracking-luxury text-brand-charcoal">
-                    Care Instructions
+                    {{ $tr("Care Instructions") }}
                   </span>
                   <span class="text-brand-charcoal font-serif text-lg leading-none">
                     {{ activeAccordions.care ? '−' : '+' }}
@@ -1121,7 +1121,7 @@ const productWhatsApp = computed(() => product.value
                 </button>
                 <div id="pdp-care" v-show="activeAccordions.care" class="pt-3 text-xs text-brand-muted leading-relaxed space-y-1.5">
                   <p v-if="product.care_instructions" class="whitespace-pre-line">{{ product.care_instructions }}</p>
-                  <p v-else>Follow the care label supplied with the garment.</p>
+                  <p v-else>{{ $tr("Follow the care label supplied with the garment.") }}</p>
                 </div>
               </div>
             </div>
@@ -1135,10 +1135,10 @@ const productWhatsApp = computed(() => product.value
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8 pb-10 border-b border-brand-border/60">
           <div>
             <span class="text-[10px] uppercase tracking-luxury text-brand-gold font-semibold block mb-1">
-              Storefront Feedback & Transparency
+              {{ $tr("Storefront Feedback & Transparency") }}
             </span>
             <h2 class="font-serif text-2xl sm:text-3xl text-brand-charcoal">
-              Customer Reviews & Fits
+              {{ $tr("Customer Reviews & Fits") }}
             </h2>
           </div>
 
@@ -1148,19 +1148,19 @@ const productWhatsApp = computed(() => product.value
               <span class="font-serif text-4xl font-bold text-brand-charcoal block leading-none">
                 {{ reviewsMeta.total_reviews && reviewsMeta.average_rating !== null ? Number(reviewsMeta.average_rating).toFixed(1) : '—' }}
               </span>
-              <div v-if="reviewsMeta.total_reviews" class="flex items-center justify-center space-x-1 my-1 text-brand-gold text-sm" aria-hidden="true">
+              <div v-if="reviewsMeta.total_reviews" class="flex items-center justify-center space-x-1 rtl:space-x-reverse my-1 text-brand-gold text-sm" aria-hidden="true">
                 <span v-for="star in 5" :key="star">
                   {{ star <= Math.round(reviewsMeta.average_rating || 0) ? '★' : '☆' }}
                 </span>
               </div>
               <span class="text-[11px] text-brand-muted block">
-                {{ reviewsMeta.total_reviews }} {{ reviewsMeta.total_reviews === 1 ? 'Review' : 'Reviews' }}
+                {{ reviewsMeta.total_reviews }} {{ reviewsMeta.total_reviews === 1 ? $tr("Review") : $tr("Reviews") }}
               </span>
             </div>
 
             <!-- Distribution Progress Bars -->
             <div class="w-44 sm:w-56 space-y-1 text-xs">
-              <div v-for="star in [5, 4, 3, 2, 1]" :key="star" class="flex items-center space-x-2 text-[11px]">
+              <div v-for="star in [5, 4, 3, 2, 1]" :key="star" class="flex items-center space-x-2 rtl:space-x-reverse text-[11px]">
                 <span class="w-3 text-brand-muted font-medium">{{ star }}</span>
                 <span class="text-brand-gold text-[10px]">★</span>
                 <div class="flex-1 h-1.5 bg-brand-cream border border-brand-border overflow-hidden">
@@ -1173,7 +1173,7 @@ const productWhatsApp = computed(() => product.value
                     }"
                   />
                 </div>
-                <span class="w-5 text-right text-brand-muted text-[10px]">
+                <span class="w-5 text-end text-brand-muted text-[10px]">
                   {{ reviewsMeta.distribution?.[star] || 0 }}
                 </span>
               </div>
@@ -1185,7 +1185,7 @@ const productWhatsApp = computed(() => product.value
               class="hidden sm:inline-flex items-center px-6 py-3 bg-brand-charcoal hover:bg-brand-gold text-white text-xs uppercase tracking-luxury font-medium transition-colors shrink-0"
               @click="writeReviewOpen = !writeReviewOpen"
             >
-              <span>{{ writeReviewOpen ? 'Close Form' : 'Write a Review' }}</span>
+              <span>{{ writeReviewOpen ? $tr("Close Form") : $tr("Write a Review") }}</span>
             </button>
           </div>
 
@@ -1195,7 +1195,7 @@ const productWhatsApp = computed(() => product.value
             class="sm:hidden w-full py-3 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium"
             @click="writeReviewOpen = !writeReviewOpen"
           >
-            {{ writeReviewOpen ? 'Close Form' : 'Write a Review' }}
+            {{ writeReviewOpen ? $tr("Close Form") : $tr("Write a Review") }}
           </button>
         </div>
 
@@ -1214,10 +1214,10 @@ const productWhatsApp = computed(() => product.value
           >
             <div class="flex items-center justify-between pb-4 mb-4 border-b border-brand-border/60">
               <h3 class="font-serif text-lg font-bold text-brand-charcoal uppercase tracking-luxury">
-                Share Your Experience
+                {{ $tr("Share Your Experience") }}
               </h3>
               <span class="text-[10px] text-brand-gold uppercase tracking-wider font-semibold">
-                Customer Fit & Fabric Review
+                {{ $tr("Customer Fit & Fabric Review") }}
               </span>
             </div>
 
@@ -1225,19 +1225,19 @@ const productWhatsApp = computed(() => product.value
             <div
               v-if="reviewSuccess"
               role="status"
-              class="p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-center space-x-3 mb-4"
+              class="p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-center space-x-3 rtl:space-x-reverse mb-4"
             >
               <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span>Thank you. Your review has been submitted for moderation.</span>
+              <span>{{ $tr("Thank you. Your review has been submitted for moderation.") }}</span>
             </div>
 
             <form v-else class="space-y-4" @submit.prevent="submitReview">
               <!-- Rating Selector -->
               <div>
                 <p id="rating-label" class="block text-xs uppercase tracking-luxury text-brand-charcoal font-medium mb-1.5">
-                  Rating (1 to 5 Stars) *
+                  {{ $tr("Rating (1 to 5 Stars) *") }}
                 </p>
                 <div role="group" aria-labelledby="rating-label" class="flex flex-wrap items-center gap-2">
                   <button
@@ -1246,34 +1246,34 @@ const productWhatsApp = computed(() => product.value
                     type="button"
                     class="text-2xl transition-transform hover:scale-110 focus:outline-none"
                     :class="[star <= reviewForm.rating ? 'text-brand-gold' : 'text-gray-300']"
-                    :aria-label="`Rate ${star} out of 5`"
+                    :aria-label="$tr('Rate {arg0} out of 5', { arg0: star })"
                     :aria-pressed="reviewForm.rating === star"
                     @click="reviewForm.rating = star"
                   >
                     ★
                   </button>
-                  <span class="ml-2 text-xs text-brand-muted font-medium">
-                    {{ reviewForm.rating }} of 5 Stars
+                  <span class="ms-2 text-xs text-brand-muted font-medium">
+                    {{ reviewForm.rating }} {{ $tr("of 5 Stars") }}
                   </span>
                 </div>
               </div>
 
               <div>
-                <label for="reviewer-name" class="block text-[11px] uppercase tracking-luxury text-brand-charcoal font-medium mb-1">Display name *</label>
+                <label for="reviewer-name" class="block text-[11px] uppercase tracking-luxury text-brand-charcoal font-medium mb-1">{{ $tr("Display name *") }}</label>
                 <input id="reviewer-name" v-model="reviewForm.reviewer_name" type="text" maxlength="255" required class="w-full bg-white border border-brand-border px-3 py-2 text-xs">
-                <p class="mt-1 text-xs text-brand-muted">Your display name will appear publicly if your review is approved.</p>
+                <p class="mt-1 text-xs text-brand-muted">{{ $tr("Your display name will appear publicly if your review is approved.") }}</p>
               </div>
 
               <!-- Comment -->
               <div>
                 <label for="review-comment" class="block text-[11px] uppercase tracking-luxury text-brand-charcoal font-medium mb-1">
-                  Your Review / Fit Feedback *
+                  {{ $tr("Your Review / Fit Feedback *") }}
                 </label>
                 <textarea
                   id="review-comment" v-model="reviewForm.comment"
                   rows="4"
                   required
-                  placeholder="How did the fabric feel? How was the bespoke stitching, drape, and sizing? Share your honest thoughts..."
+                  :placeholder="$tr('How did the fabric feel? How was the bespoke stitching, drape, and sizing? Share your honest thoughts...')"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:outline-none focus:border-brand-gold"
                 />
               </div>
@@ -1281,21 +1281,21 @@ const productWhatsApp = computed(() => product.value
               <!-- Customer Photo Upload -->
               <div>
                 <label for="review-photo" class="block text-[11px] uppercase tracking-luxury text-brand-charcoal font-medium mb-1">
-                  Upload Fit Photo <span class="text-brand-muted lowercase text-[10px]">(optional, see your dress on our storefront)</span>
+                  {{ $tr("Upload Fit Photo") }} <span class="text-brand-muted lowercase text-[10px]">{{ $tr("(optional, see your dress on our storefront)") }}</span>
                 </label>
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-4 rtl:space-x-reverse">
                   <input
                     id="review-photo" type="file"
                     accept="image/jpeg,image/png,image/webp"
-                    class="min-w-0 max-w-full text-xs text-brand-charcoal file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:uppercase file:tracking-luxury file:bg-brand-charcoal file:text-white hover:file:bg-brand-gold file:transition-colors file:cursor-pointer"
+                    class="min-w-0 max-w-full text-xs text-brand-charcoal file:me-3 file:py-2 file:px-4 file:border-0 file:text-xs file:uppercase file:tracking-luxury file:bg-brand-charcoal file:text-white hover:file:bg-brand-gold file:transition-colors file:cursor-pointer"
                     @change="onPhotoSelected"
                   >
                   <div v-if="reviewPhotoPreview" class="relative w-12 h-16 border border-brand-border overflow-hidden">
-                    <img :src="reviewPhotoPreview" alt="Preview" class="w-full h-full object-cover">
+                    <img :src="reviewPhotoPreview" :alt="$tr('Preview')" class="w-full h-full object-cover">
                     <button
                       type="button"
-                      class="absolute top-0 right-0 bg-red-600 text-white text-[9px] p-0.5"
-                      title="Remove image"
+                      class="absolute top-0 end-0 bg-red-600 text-white text-[9px] p-0.5"
+                      :title="$tr('Remove image')"
                       @click="removeReviewPhoto"
                     >
                       ✕
@@ -1305,24 +1305,24 @@ const productWhatsApp = computed(() => product.value
               </div>
 
               <p v-if="reviewError" class="text-xs text-red-600">
-                {{ reviewError }}
+                {{ $tr(reviewError) }}
               </p>
 
               <!-- Form Submit -->
-              <div class="pt-2 flex justify-end space-x-3">
+              <div class="pt-2 flex justify-end space-x-3 rtl:space-x-reverse">
                 <button
                   type="button"
                   class="px-5 py-2 text-xs uppercase tracking-luxury text-brand-muted hover:text-brand-charcoal"
                   @click="writeReviewOpen = false"
                 >
-                  Cancel
+                  {{ $tr("Cancel") }}
                 </button>
                 <button
                   type="submit"
                   :disabled="reviewSubmitting"
                   class="px-8 py-2.5 bg-brand-charcoal hover:bg-brand-gold text-white text-xs uppercase tracking-luxury font-medium transition-colors disabled:opacity-50"
                 >
-                  {{ reviewSubmitting ? 'Submitting...' : 'Post Verified Review' }}
+                  {{ reviewSubmitting ? $tr("Submitting...") : $tr("Post Verified Review") }}
                 </button>
               </div>
             </form>
@@ -1337,15 +1337,15 @@ const productWhatsApp = computed(() => product.value
             :class="[reviewFilter === 'all' ? 'bg-brand-charcoal text-white border-brand-charcoal font-semibold' : 'bg-brand-cream border-brand-border text-brand-charcoal hover:border-brand-charcoal']"
             @click="reviewFilter = 'all'"
           >
-            All Reviews ({{ reviews.length }})
+            {{ $tr("All Reviews (") }}{{ reviews.length }})
           </button>
           <button
             type="button"
-            class="px-3.5 py-1.5 rounded-full text-xs transition-all border flex items-center space-x-1"
+            class="px-3.5 py-1.5 rounded-full text-xs transition-all border flex items-center space-x-1 rtl:space-x-reverse"
             :class="[reviewFilter === 'photos' ? 'bg-brand-charcoal text-white border-brand-charcoal font-semibold' : 'bg-brand-cream border-brand-border text-brand-charcoal hover:border-brand-charcoal']"
             @click="reviewFilter = 'photos'"
           >
-            <span>📷 With Customer Photos</span>
+            <span>{{ $tr("📷 With Customer Photos") }}</span>
             <span class="text-[10px] opacity-80">({{ reviews.filter((r: any) => Boolean(r.photo_url)).length }})</span>
           </button>
           <button
@@ -1356,7 +1356,7 @@ const productWhatsApp = computed(() => product.value
             :class="[reviewFilter === st ? 'bg-brand-charcoal text-white border-brand-charcoal font-semibold' : 'bg-brand-cream border-brand-border text-brand-charcoal hover:border-brand-charcoal']"
             @click="reviewFilter = st"
           >
-            {{ st }} Stars ({{ reviews.filter((r: any) => r.rating === st).length }})
+            {{ st }} {{ $tr("Stars (") }}{{ reviews.filter((r: any) => r.rating === st).length }})
           </button>
         </div>
 
@@ -1370,18 +1370,18 @@ const productWhatsApp = computed(() => product.value
             <div>
               <div class="flex items-start justify-between mb-3">
                 <div>
-                  <div class="flex items-center space-x-2">
+                  <div class="flex items-center space-x-2 rtl:space-x-reverse">
                     <h3 class="font-serif text-sm font-semibold text-brand-charcoal">
                       {{ rev.reviewer_name }}
                     </h3>
                     <span
                       v-if="rev.is_verified_purchase"
-                      class="inline-flex items-center space-x-1 text-[9px] uppercase tracking-wider font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5"
+                      class="inline-flex items-center space-x-1 rtl:space-x-reverse text-[9px] uppercase tracking-wider font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5"
                     >
                       <svg class="w-3 h-3 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                       </svg>
-                      <span>Verified Buyer</span>
+                      <span>{{ $tr("Verified Buyer") }}</span>
                     </span>
                   </div>
                   <span class="text-[10px] text-brand-muted block mt-0.5">
@@ -1402,16 +1402,16 @@ const productWhatsApp = computed(() => product.value
             </div>
 
             <!-- Customer Fit Photo Thumbnail -->
-            <div v-if="rev.photo_url" class="pt-2 border-t border-brand-border/40 flex items-center space-x-3">
+            <div v-if="rev.photo_url" class="pt-2 border-t border-brand-border/40 flex items-center space-x-3 rtl:space-x-reverse">
               <button
                 type="button"
                 class="group relative w-16 h-20 bg-brand-cream border border-brand-border overflow-hidden shrink-0 cursor-pointer focus:outline-none"
-                title="Click to view customer photo"
+                :title="$tr('Click to view customer photo')"
                 @click="activePhotoModal = rev.photo_url"
               >
                 <img
                   :src="rev.photo_url"
-                  :alt="`Fit photo by ${rev.reviewer_name}`"
+                  :alt="$tr('Fit photo by {arg0}', { arg0: rev.reviewer_name })"
                   class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                 >
                 <div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors flex items-center justify-center">
@@ -1421,8 +1421,8 @@ const productWhatsApp = computed(() => product.value
                 </div>
               </button>
               <div class="text-[11px] text-brand-muted">
-                <span class="font-medium text-brand-charcoal block">Customer Fit Photo</span>
-                <span>Click image to view in full resolution</span>
+                <span class="font-medium text-brand-charcoal block">{{ $tr("Customer Fit Photo") }}</span>
+                <span>{{ $tr("Click image to view in full resolution") }}</span>
               </div>
             </div>
           </div>
@@ -1431,17 +1431,17 @@ const productWhatsApp = computed(() => product.value
         <!-- No Reviews in Filter State -->
         <div v-else class="py-12 text-center bg-brand-cream/20 border border-brand-border/50">
           <p class="font-serif text-brand-charcoal text-base mb-1">
-            No customer reviews match this filter.
+            {{ $tr("No customer reviews match this filter.") }}
           </p>
           <p class="text-xs text-brand-muted mb-4">
-            Be the first to share your fitting experience with other shoppers.
+            {{ $tr("Be the first to share your fitting experience with other shoppers.") }}
           </p>
           <button
             type="button"
             class="px-5 py-2 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium"
             @click="writeReviewOpen = true"
           >
-            Write a Review
+            {{ $tr("Write a Review") }}
           </button>
         </div>
       </section>
@@ -1451,18 +1451,18 @@ const productWhatsApp = computed(() => product.value
         <div class="flex items-center justify-between mb-8">
           <div>
             <span class="text-[10px] uppercase tracking-luxury text-brand-gold font-semibold block mb-1">
-              Curated Complements
+              {{ $tr("Curated Complements") }}
             </span>
             <h2 class="font-serif text-2xl sm:text-3xl text-brand-charcoal">
-              You May Also Like
+              {{ $tr("You May Also Like") }}
             </h2>
           </div>
           <NuxtLink
             to="/shop"
-            class="text-xs font-semibold text-brand-charcoal hover:text-brand-gold transition-colors flex items-center space-x-1 uppercase tracking-luxury"
+            class="text-xs font-semibold text-brand-charcoal hover:text-brand-gold transition-colors flex items-center space-x-1 rtl:space-x-reverse uppercase tracking-luxury"
           >
-            <span>View All</span>
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <span>{{ $tr("View All") }}</span>
+            <svg data-directional-icon class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
           </NuxtLink>
@@ -1484,7 +1484,7 @@ const productWhatsApp = computed(() => product.value
     <!-- Mobile Sticky Bottom Action Bar -->
     <div v-if="!pending && product && !error && (colorSizes.length || customFitAvailable)" class="pdp-sticky-buy lg:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-brand-border p-3 z-30 flex items-center gap-2 shadow-2xl">
       <div class="flex-1">
-        <p class="text-xs text-brand-muted leading-none">{{ isCustomFit ? 'Custom fit' : selectedSize ? `Size ${selectedSize}` : 'Select a size' }}</p>
+        <p class="text-xs text-brand-muted leading-none">{{ isCustomFit ? $tr("Custom fit") : selectedSize ? $tr("Size {arg0}", { arg0: selectedSize }) : $tr("Select a size") }}</p>
         <p class="font-serif text-base font-bold text-brand-charcoal leading-tight">
           {{ formatPrice(finalUnitPrice) }}
         </p>
@@ -1496,9 +1496,9 @@ const productWhatsApp = computed(() => product.value
           class="w-full py-3 bg-brand-gold hover:bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium transition-colors"
           @click="scrollToStockAlert"
         >
-          Request restock
+          {{ $tr("Request restock") }}
         </button>
-        <button v-else type="button" class="w-full py-3 border border-brand-charcoal text-xs uppercase tracking-luxury font-medium" @click="focusSizeChoice">See other sizes</button>
+        <button v-else type="button" class="w-full py-3 border border-brand-charcoal text-xs uppercase tracking-luxury font-medium" @click="focusSizeChoice">{{ $tr("See other sizes") }}</button>
       </div>
       <button
         v-else
@@ -1506,7 +1506,7 @@ const productWhatsApp = computed(() => product.value
         class="flex-1 min-h-11 px-2 py-3 bg-brand-charcoal text-white text-xs uppercase tracking-wider font-medium"
         @click="activeVariant ? handleAddToCart() : focusSizeChoice()"
       >
-        {{ activeVariant ? 'Add to Bag' : 'Choose a size' }}
+        {{ activeVariant ? $tr("Add to Bag") : $tr("Choose a size") }}
       </button>
     </div>
 
@@ -1535,8 +1535,8 @@ const productWhatsApp = computed(() => product.value
         >
           <!-- Close button -->
           <button
-            class="absolute top-4 right-4 text-brand-charcoal hover:text-brand-gold p-1"
-            aria-label="Close size guide"
+            class="absolute top-4 end-4 text-brand-charcoal hover:text-brand-gold p-1"
+            :aria-label="$tr('Close size guide')"
             @click="sizeGuideOpen = false"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1545,10 +1545,10 @@ const productWhatsApp = computed(() => product.value
           </button>
 
           <!-- Modal Title -->
-          <div class="flex flex-wrap items-center gap-3 border-b border-brand-border pb-4 mb-6 pr-6">
+          <div class="flex flex-wrap items-center gap-3 border-b border-brand-border pb-4 mb-6 pe-6">
             <div>
               <h2 id="size-guide-title" class="font-serif text-xl sm:text-2xl font-bold uppercase tracking-luxury text-brand-charcoal">
-                Size Guide
+                {{ $tr("Size Guide") }}
               </h2>
               <p class="text-sm text-brand-muted">{{ product?.name }}</p>
             </div>
@@ -1561,7 +1561,7 @@ const productWhatsApp = computed(() => product.value
                 :aria-pressed="sizeGuideUnit === 'inches'"
                 @click="sizeGuideUnit = 'inches'"
               >
-                Inches
+                {{ $tr("Inches") }}
               </button>
               <button
                 class="px-3 py-1 font-medium transition-colors"
@@ -1569,31 +1569,31 @@ const productWhatsApp = computed(() => product.value
                 :aria-pressed="sizeGuideUnit === 'cm'"
                 @click="sizeGuideUnit = 'cm'"
               >
-                CM
+                {{ $tr("CM") }}
               </button>
             </div>
           </div>
 
           <p v-if="!sizeChart.length" class="mb-4 text-sm text-brand-muted">
-            A verified size chart is not available for this item yet.
-            <a v-if="productWhatsApp" :href="productWhatsApp" target="_blank" rel="noopener noreferrer" class="underline">Ask the store for measurements</a>
-            <NuxtLink v-else to="/faq" class="underline">See fit and support FAQs</NuxtLink>.
+            {{ $tr("A verified size chart is not available for this item yet.") }}
+            <a v-if="productWhatsApp" :href="productWhatsApp" target="_blank" rel="noopener noreferrer" class="underline">{{ $tr("Ask the store for measurements") }}</a>
+            <NuxtLink v-else to="/faq" class="underline">{{ $tr("See fit and support FAQs") }}</NuxtLink>.
           </p>
           <template v-else>
             <p id="chart-measurement-type" class="mb-3 text-sm text-brand-muted">
               {{ product?.size_chart_type === 'garment'
-                ? 'Finished garment measurements. Compare with a similar garment that fits you. The bust, waist and hip figures are full circumferences, not flat widths.'
-                : 'Recommended body measurements. Measure around your body, not the garment.' }}
+                ? $tr("Finished garment measurements. Compare with a similar garment that fits you. The bust, waist and hip figures are full circumferences, not flat widths.")
+                : $tr("Recommended body measurements. Measure around your body, not the garment.") }}
             </p>
-            <div class="overflow-x-auto mb-4" tabindex="0" role="region" aria-label="Size measurements">
-              <table aria-describedby="chart-measurement-type" class="w-full text-xs text-left">
+            <div class="overflow-x-auto mb-4" tabindex="0" role="region" :aria-label="$tr('Size measurements')">
+              <table aria-describedby="chart-measurement-type" class="w-full text-xs text-start">
                 <thead>
                   <tr class="border-b border-brand-border text-xs text-brand-charcoal bg-brand-cream/50">
-                    <th scope="col" class="p-2">Size</th>
-                    <th scope="col" class="p-2">Bust</th>
-                    <th scope="col" class="p-2">Waist</th>
-                    <th scope="col" class="p-2">Hips</th>
-                    <th scope="col" class="p-2">Shirt length</th>
+                    <th scope="col" class="p-2">{{ $tr("Size") }}</th>
+                    <th scope="col" class="p-2">{{ $tr("Bust") }}</th>
+                    <th scope="col" class="p-2">{{ $tr("Waist") }}</th>
+                    <th scope="col" class="p-2">{{ $tr("Hips") }}</th>
+                    <th scope="col" class="p-2">{{ $tr("Shirt length") }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-brand-border">
@@ -1608,7 +1608,7 @@ const productWhatsApp = computed(() => product.value
               </table>
             </div>
           </template>
-          <p v-if="product?.fit_notes" class="whitespace-pre-line text-sm"><strong>Fit notes:</strong> {{ product.fit_notes }}</p>
+          <p v-if="product?.fit_notes" class="whitespace-pre-line text-sm"><strong>{{ $tr("Fit notes:") }}</strong> {{ product.fit_notes }}</p>
         </div>
       </div>
     </Transition>
@@ -1627,19 +1627,19 @@ const productWhatsApp = computed(() => product.value
         class="fixed inset-0 bg-brand-charcoal/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
         @click="activePhotoModal = null"
       >
-        <div ref="dialogContent" role="dialog" aria-modal="true" aria-label="Customer fit photo" class="relative max-w-2xl max-h-[90vh] bg-black p-1 shadow-2xl" @click.stop @keydown="dialogKey">
+        <div ref="dialogContent" role="dialog" aria-modal="true" :aria-label="$tr('Customer fit photo')" class="relative max-w-2xl max-h-[90vh] bg-black p-1 shadow-2xl" @click.stop @keydown="dialogKey">
           <button
-            class="absolute -top-10 right-0 text-white hover:text-brand-gold p-1 flex items-center space-x-1 text-xs uppercase tracking-luxury font-medium"
+            class="absolute -top-10 end-0 text-white hover:text-brand-gold p-1 flex items-center space-x-1 rtl:space-x-reverse text-xs uppercase tracking-luxury font-medium"
             @click="activePhotoModal = null"
           >
-            <span>Close</span>
+            <span>{{ $tr("Close") }}</span>
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
           <img
             :src="activePhotoModal"
-            alt="Customer Dress Fit"
+            :alt="$tr('Customer Dress Fit')"
             class="max-w-full max-h-[85vh] object-contain"
           >
         </div>

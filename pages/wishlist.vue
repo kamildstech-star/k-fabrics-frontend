@@ -17,23 +17,23 @@ const formatPrice = (val: number) => 'Rs. ' + Number(val).toLocaleString('en-PK'
   <div class="bg-brand-white min-h-screen py-10 sm:py-16">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Breadcrumbs -->
-      <nav class="flex items-center space-x-2 text-[10px] uppercase tracking-luxury text-brand-muted mb-8">
-        <NuxtLink to="/" class="hover:text-brand-charcoal transition-colors">Home</NuxtLink>
+      <nav class="flex items-center space-x-2 rtl:space-x-reverse text-[10px] uppercase tracking-luxury text-brand-muted mb-8">
+        <NuxtLink to="/" class="hover:text-brand-charcoal transition-colors">{{ $tr("Home") }}</NuxtLink>
         <span>/</span>
-        <span class="text-brand-charcoal font-semibold">Wishlist</span>
+        <span class="text-brand-charcoal font-semibold">{{ $tr("Wishlist") }}</span>
       </nav>
 
       <!-- Header -->
       <div class="flex flex-col sm:flex-row sm:items-end justify-between border-b border-brand-border pb-6 mb-10">
         <div>
           <span class="text-[10px] uppercase tracking-[0.25em] text-brand-gold font-semibold block mb-1">
-            Personal Curation
+            {{ $tr("Personal Curation") }}
           </span>
           <h1 class="font-serif text-3xl sm:text-4xl font-bold text-brand-charcoal">
-            Saved Pieces
+            {{ $tr("Saved Pieces") }}
           </h1>
           <p class="text-xs text-brand-muted mt-1 font-light">
-            {{ wishlist.items.length }} {{ wishlist.items.length === 1 ? 'garment' : 'garments' }} saved to your personal atelier wishlist
+            {{ wishlist.items.length }} {{ wishlist.items.length === 1 ? $tr("garment") : $tr("garments") }} {{ $tr("saved to your personal atelier wishlist") }}
           </p>
         </div>
 
@@ -42,7 +42,7 @@ const formatPrice = (val: number) => 'Rs. ' + Number(val).toLocaleString('en-PK'
           class="text-xs uppercase tracking-luxury text-brand-muted hover:text-red-600 transition-colors mt-4 sm:mt-0 underline underline-offset-4"
           @click="wishlist.clearWishlist()"
         >
-          Clear All
+          {{ $tr("Clear All") }}
         </button>
       </div>
 
@@ -57,16 +57,16 @@ const formatPrice = (val: number) => 'Rs. ' + Number(val).toLocaleString('en-PK'
           </svg>
         </div>
         <h2 class="font-serif text-xl font-bold text-brand-charcoal mb-2">
-          Your Wishlist is Empty
+          {{ $tr("Your Wishlist is Empty") }}
         </h2>
         <p class="text-xs text-brand-muted max-w-xs mx-auto mb-6">
-          Explore our latest Pret collection or bespoke tailored ensembles and tap the heart icon to save your favorites.
+          {{ $tr("Explore our latest Pret collection or bespoke tailored ensembles and tap the heart icon to save your favorites.") }}
         </p>
         <NuxtLink
           to="/shop"
           class="inline-block px-8 py-3.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors"
         >
-          Explore Collection
+          {{ $tr("Explore Collection") }}
         </NuxtLink>
       </div>
 

@@ -45,28 +45,28 @@ const handleLogin = async () => {
       <!-- Header -->
       <div class="text-center mb-8">
         <span class="text-[10px] uppercase tracking-[0.3em] text-brand-gold font-semibold block mb-1">
-          Atelier Member Portal
+          {{ $tr("Atelier Member Portal") }}
         </span>
         <h1 class="font-serif text-3xl font-bold text-brand-charcoal">
-          Sign In
+          {{ $tr("Sign In") }}
         </h1>
         <p class="text-xs text-brand-muted mt-2 font-light">
-          Access your saved measurements, track order progress, and reorder bespoke pieces.
+          {{ $tr("Access your saved measurements, track order progress, and reorder bespoke pieces.") }}
         </p>
       </div>
 
       <!-- Error Alert -->
       <div v-if="errorMsg" role="alert" class="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 text-xs">
-        {{ errorMsg }}
+        {{ $tr(errorMsg) }}
       </div>
 
       <!-- Login Form -->
       <form class="space-y-5" @submit.prevent="handleLogin">
         <div>
           <label for="login-email" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1.5">
-            Email Address *
+            {{ $tr("Email Address *") }}
           </label>
-          <input
+          <input dir="ltr"
             id="login-email"
             v-model="form.email"
             autocomplete="username"
@@ -80,11 +80,11 @@ const handleLogin = async () => {
         <div>
           <div class="flex items-center justify-between mb-1.5">
             <label for="login-password" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block">
-              Password *
+              {{ $tr("Password *") }}
             </label>
-            <NuxtLink to="/forgot-password" class="text-sm font-semibold underline">Forgot password?</NuxtLink>
+            <NuxtLink to="/forgot-password" class="text-sm font-semibold underline">{{ $tr("Forgot password?") }}</NuxtLink>
           </div>
-          <input
+          <input dir="ltr"
             id="login-password"
             v-model="form.password"
             autocomplete="current-password"
@@ -100,20 +100,20 @@ const handleLogin = async () => {
           :disabled="isSubmitting"
           class="w-full py-4 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors duration-200 disabled:opacity-50 shadow-md"
         >
-          <span v-if="isSubmitting">Authenticating...</span>
-          <span v-else>Sign In</span>
+          <span v-if="isSubmitting">{{ $tr("Authenticating...") }}</span>
+          <span v-else>{{ $tr("Sign In") }}</span>
         </button>
       </form>
 
       <!-- Registration Link -->
       <div class="mt-8 pt-6 border-t border-brand-border space-y-4 text-center text-xs">
         <p class="text-brand-muted">
-          New to K. Fabrics?
+          {{ $tr("New to K. Fabrics?") }}
           <NuxtLink
             to="/register"
-            class="text-brand-charcoal font-semibold hover:text-brand-gold ml-1 underline underline-offset-4"
+            class="text-brand-charcoal font-semibold hover:text-brand-gold ms-1 underline underline-offset-4"
           >
-            Create an Account
+            {{ $tr("Create an Account") }}
           </NuxtLink>
         </p>
       </div>

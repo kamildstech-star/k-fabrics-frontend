@@ -38,3 +38,18 @@ Replace demo photography with the actual garments: front, back, fabric detail an
 Tailoring forms and carts warn before closing or refreshing when they contain unsubmitted private details. Measurements, notes and reference photos are not stored in the browser; signed-in customers can reapply their saved measurement profiles, but the unsent booking is not restored automatically. Checkout lets the customer download or print the private receipt before leaving.
 
 New launch flows should be tested against the matching API and migrations. In staging, run a ready-to-wear COD order through confirmation and dispatch, then open a private return case. Test the disabled tailoring flow and the approved bank-transfer fixture (advance before work, remaining balance before dispatch). Test account and guest tracking recovery with a test mailbox, never real customer addresses.
+
+### Storefront language
+
+The header's **اردو / EN** switch changes storefront navigation, forms and
+policies on the same URL. Nuxt uses the site-wide `kf_language` preference cookie
+to select the language on the first render. English is the default. If an
+external cache is configured, it must respect `Vary: Cookie` for storefront HTML.
+Canonical URLs are shared between languages; this is a language preference,
+not a separately indexed Urdu storefront.
+
+Storefront translations live in `i18n/ur.json`. Add Urdu text for new UI copy
+and keep named placeholders intact. Catalog names, descriptions, user-entered
+text, staff-entered bank instructions and unknown API messages use the text
+provided by their source. Language switching doesn't change search matching,
+checkout values, order IDs, sizes, measurements, or currency.

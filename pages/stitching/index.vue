@@ -288,34 +288,33 @@ const finalizeBooking = (proceedToCheckout = false) => {
       <!-- Title Header -->
       <div class="text-center max-w-xl mx-auto mb-10">
         <span class="text-[10px] uppercase tracking-[0.3em] text-brand-gold font-semibold block mb-2">
-          Atelier Bespoke Service
+          {{ $tr("Atelier Bespoke Service") }}
         </span>
         <h1 class="font-serif text-3xl sm:text-5xl font-bold text-brand-charcoal">
-          Bespoke Stitching Atelier
+          {{ $tr("Bespoke Stitching Atelier") }}
         </h1>
         <p class="text-xs text-brand-muted mt-2 font-light leading-relaxed">
-          Book tailoring for your own unstitched fabric. Send it by courier after the atelier confirms where and when to ship it.
+          {{ $tr("Book tailoring for your own unstitched fabric. Send it by courier after the atelier confirms where and when to ship it.") }}
         </p>
         <p v-if="tailoringAvailable" class="mt-3 text-xs leading-relaxed text-brand-charcoal">
-          To protect your privacy, unfinished measurements and reference photos stay in this tab. Finish checkout before refreshing or closing it.
-          Signed-in customers can reload a measurement profile they have saved in their account.
+          {{ $tr("To protect your privacy, unfinished measurements and reference photos stay in this tab. Finish checkout before refreshing or closing it. Signed-in customers can reload a measurement profile they have saved in their account.") }}
         </p>
       </div>
 
-      <p v-if="servicesPending" role="status" class="text-center">Checking booking availability…</p>
+      <p v-if="servicesPending" role="status" class="text-center">{{ $tr("Checking booking availability…") }}</p>
       <section v-else-if="servicesError || !tailoringAvailable || !services.length" aria-labelledby="booking-unavailable" class="border border-brand-border bg-brand-cream/40 p-6 space-y-4 text-center">
-        <h2 id="booking-unavailable" class="font-serif text-xl font-semibold">Online tailoring bookings are unavailable</h2>
-        <p v-if="servicesError">We couldn’t check availability right now. Please try again later.</p>
-        <p v-else-if="!tailoringAvailable">Bookings are paused until verified bank-transfer payment is available. Please don’t send fabric or measurements yet.</p>
-        <p v-else>No tailoring packages are accepting bookings at the moment.</p>
-        <NuxtLink to="/shop" class="inline-block font-semibold underline underline-offset-4">Shop ready-to-wear</NuxtLink>
+        <h2 id="booking-unavailable" class="font-serif text-xl font-semibold">{{ $tr("Online tailoring bookings are unavailable") }}</h2>
+        <p v-if="servicesError">{{ $tr("We couldn’t check availability right now. Please try again later.") }}</p>
+        <p v-else-if="!tailoringAvailable">{{ $tr("Bookings are paused until verified bank-transfer payment is available. Please don’t send fabric or measurements yet.") }}</p>
+        <p v-else>{{ $tr("No tailoring packages are accepting bookings at the moment.") }}</p>
+        <NuxtLink to="/shop" class="inline-block font-semibold underline underline-offset-4">{{ $tr("Shop ready-to-wear") }}</NuxtLink>
       </section>
       <template v-else>
       <!-- 3-Step Luxury Progress Stepper -->
       <div class="mb-12">
         <div class="flex items-center justify-between max-w-xl mx-auto mb-3">
           <!-- Step 1 -->
-          <div class="flex items-center space-x-2">
+          <div class="flex items-center space-x-2 rtl:space-x-reverse">
             <div
               class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors"
               :class="[
@@ -328,7 +327,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
               class="text-xs uppercase tracking-luxury hidden sm:inline"
               :class="[currentStep === 1 ? 'font-bold text-brand-charcoal' : 'text-brand-muted']"
             >
-              Service & Design
+              {{ $tr("Service & Design") }}
             </span>
           </div>
 
@@ -336,7 +335,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
           <div class="flex-1 mx-4 h-0.5 transition-colors" :class="[currentStep >= 2 ? 'bg-brand-gold' : 'bg-brand-border']" />
 
           <!-- Step 2 -->
-          <div class="flex items-center space-x-2">
+          <div class="flex items-center space-x-2 rtl:space-x-reverse">
             <div
               class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors"
               :class="[
@@ -349,7 +348,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
               class="text-xs uppercase tracking-luxury hidden sm:inline"
               :class="[currentStep === 2 ? 'font-bold text-brand-charcoal' : 'text-brand-muted']"
             >
-              Measurements
+              {{ $tr("Measurements") }}
             </span>
           </div>
 
@@ -357,7 +356,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
           <div class="flex-1 mx-4 h-0.5 transition-colors" :class="[currentStep >= 3 ? 'bg-brand-gold' : 'bg-brand-border']" />
 
           <!-- Step 3 -->
-          <div class="flex items-center space-x-2">
+          <div class="flex items-center space-x-2 rtl:space-x-reverse">
             <div
               class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors"
               :class="[
@@ -370,7 +369,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
               class="text-xs uppercase tracking-luxury hidden sm:inline"
               :class="[currentStep === 3 ? 'font-bold text-brand-charcoal' : 'text-brand-muted']"
             >
-              Handover & Review
+              {{ $tr("Handover & Review") }}
             </span>
           </div>
         </div>
@@ -389,7 +388,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
         <!-- Service Selection Cards -->
         <div>
           <h2 class="font-serif text-lg sm:text-xl font-bold uppercase tracking-luxury text-brand-charcoal mb-4">
-            1. Select Stitching Package
+            {{ $tr("1. Select Stitching Package") }}
           </h2>
 
           <div v-if="servicesPending" class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -415,7 +414,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
                   </h3>
                   <span
                     v-if="selectedServiceId === service.id"
-                    class="w-5 h-5 rounded-full bg-brand-charcoal text-white text-[10px] flex items-center justify-center shrink-0 ml-2"
+                    class="w-5 h-5 rounded-full bg-brand-charcoal text-white text-[10px] flex items-center justify-center shrink-0 ms-2"
                   >
                     ✓
                   </span>
@@ -427,13 +426,13 @@ const finalizeBooking = (proceedToCheckout = false) => {
 
               <div class="pt-3 border-t border-brand-border/60 flex items-baseline justify-between">
                 <div>
-                  <span class="text-[10px] uppercase tracking-wider text-brand-muted block">Fee</span>
+                  <span class="text-[10px] uppercase tracking-wider text-brand-muted block">{{ $tr("Fee") }}</span>
                   <span class="font-serif text-lg font-bold text-brand-charcoal">
                     {{ formatPrice(service.base_price) }}
                   </span>
                 </div>
                 <span class="text-[10px] uppercase tracking-wider text-brand-gold font-medium">
-                  ~{{ service.estimated_days }} Working Days
+                  ~{{ service.estimated_days }} {{ $tr("Working Days") }}
                 </span>
               </div>
             </div>
@@ -444,12 +443,12 @@ const finalizeBooking = (proceedToCheckout = false) => {
         <div class="border-t border-brand-border pt-8">
           <div class="flex items-center justify-between mb-2">
             <h2 class="font-serif text-lg sm:text-xl font-bold uppercase tracking-luxury text-brand-charcoal">
-              2. Design Reference Photo (Optional)
+              {{ $tr("2. Design Reference Photo (Optional)") }}
             </h2>
             <span class="text-[10px] uppercase text-brand-muted">JPEG, PNG, WebP</span>
           </div>
           <p class="text-xs text-brand-muted mb-4 font-light">
-            Upload a picture from Instagram, Pinterest, or catalogue showing how you would like your sleeves, neck, or silhouette styled.
+            {{ $tr("Upload a picture from Instagram, Pinterest, or catalogue showing how you would like your sleeves, neck, or silhouette styled.") }}
           </p>
 
           <input
@@ -472,22 +471,22 @@ const finalizeBooking = (proceedToCheckout = false) => {
               </svg>
             </div>
             <p class="text-xs font-medium text-brand-charcoal uppercase tracking-luxury">
-              Click to upload design reference image
+              {{ $tr("Click to upload design reference image") }}
             </p>
             <p class="text-[10px] text-brand-muted mt-1">
-              JPEG, PNG or WebP up to 5 MB. Not saved if you reload this page.
+              {{ $tr("JPEG, PNG or WebP up to 5 MB. Not saved if you reload this page.") }}
             </p>
           </button>
 
           <div v-else class="relative w-48 aspect-[3/4] border border-brand-border overflow-hidden bg-brand-cream">
             <img
               :src="designReferencePreview"
-              alt="Design reference"
+              :alt="$tr('Design reference')"
               class="w-full h-full object-cover"
             >
             <button
-              class="absolute top-2 right-2 p-1 bg-brand-charcoal/80 text-white hover:bg-red-600 transition-colors"
-              aria-label="Remove design reference image"
+              class="absolute top-2 end-2 p-1 bg-brand-charcoal/80 text-white hover:bg-red-600 transition-colors"
+              :aria-label="$tr('Remove design reference image')"
               type="button"
               @click="removeReferenceImage"
             >
@@ -496,20 +495,20 @@ const finalizeBooking = (proceedToCheckout = false) => {
               </svg>
             </button>
           </div>
-          <p v-if="referenceError" role="alert" class="mt-2 text-xs text-red-800">{{ referenceError }}</p>
+          <p v-if="referenceError" role="alert" class="mt-2 text-xs text-red-800">{{ $tr(referenceError) }}</p>
         </div>
 
         <!-- Neck, Sleeve & Trouser Cut Selectors -->
         <div class="border-t border-brand-border pt-8 space-y-6">
           <h2 class="font-serif text-lg sm:text-xl font-bold uppercase tracking-luxury text-brand-charcoal">
-            3. Style Preferences
+            {{ $tr("3. Style Preferences") }}
           </h2>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Neckline -->
             <div>
               <label for="stitch-neckline-style" class="text-xs uppercase tracking-luxury text-brand-charcoal font-semibold block mb-2">
-                Neckline Style
+                {{ $tr("Neckline Style") }}
               </label>
               <select
                 id="stitch-neckline-style"
@@ -517,7 +516,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 class="w-full bg-white border border-brand-border px-3 py-2.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
               >
                 <option v-for="opt in neckStyles" :key="opt" :value="opt">
-                  {{ opt }}
+                  {{ $tr(opt) }}
                 </option>
               </select>
             </div>
@@ -525,7 +524,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
             <!-- Sleeve Style -->
             <div>
               <label for="stitch-sleeve-style" class="text-xs uppercase tracking-luxury text-brand-charcoal font-semibold block mb-2">
-                Sleeve Styling
+                {{ $tr("Sleeve Styling") }}
               </label>
               <select
                 id="stitch-sleeve-style"
@@ -533,7 +532,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 class="w-full bg-white border border-brand-border px-3 py-2.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
               >
                 <option v-for="opt in sleeveStyles" :key="opt" :value="opt">
-                  {{ opt }}
+                  {{ $tr(opt) }}
                 </option>
               </select>
             </div>
@@ -541,7 +540,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
             <!-- Trouser Style -->
             <div>
               <label for="stitch-trouser-style" class="text-xs uppercase tracking-luxury text-brand-charcoal font-semibold block mb-2">
-                Trouser Cut
+                {{ $tr("Trouser Cut") }}
               </label>
               <select
                 id="stitch-trouser-style"
@@ -549,7 +548,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 class="w-full bg-white border border-brand-border px-3 py-2.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
               >
                 <option v-for="opt in trouserStyles" :key="opt" :value="opt">
-                  {{ opt }}
+                  {{ $tr(opt) }}
                 </option>
               </select>
             </div>
@@ -558,14 +557,14 @@ const finalizeBooking = (proceedToCheckout = false) => {
           <!-- Special Tailor Instructions -->
           <div>
             <label for="stitch-instructions" class="text-xs uppercase tracking-luxury text-brand-charcoal font-semibold block mb-2">
-              Tailor Instructions & Custom Details
+              {{ $tr("Tailor Instructions & Custom Details") }}
             </label>
             <textarea
               id="stitch-instructions"
               v-model="specialInstructions"
               maxlength="930"
               rows="3"
-              placeholder="e.g. Include contrast piping on neckline, add loops with fabric buttons, double lining for trousers..."
+              :placeholder="$tr('e.g. Include contrast piping on neckline, add loops with fabric buttons, double lining for trousers...')"
               class="w-full bg-white border border-brand-border p-3 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
             />
           </div>
@@ -574,10 +573,10 @@ const finalizeBooking = (proceedToCheckout = false) => {
         <!-- Navigation Buttons -->
         <div class="pt-6 border-t border-brand-border flex justify-end">
           <button
-            class="px-8 py-3.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors flex items-center space-x-2"
+            class="px-8 py-3.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors flex items-center space-x-2 rtl:space-x-reverse"
             @click="goToStep(2)"
           >
-            <span>Proceed to Measurements</span>
+            <span>{{ $tr("Proceed to Measurements") }}</span>
             <span>→</span>
           </button>
         </div>
@@ -597,7 +596,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
             :aria-pressed="measurementMode === 'manual'"
             @click="measurementMode = 'manual'"
           >
-            Enter Measurements Online
+            {{ $tr("Enter Measurements Online") }}
           </button>
           <button
             class="pb-3 px-6 text-xs uppercase tracking-luxury font-semibold transition-colors border-b-2"
@@ -609,26 +608,26 @@ const finalizeBooking = (proceedToCheckout = false) => {
             :aria-pressed="measurementMode === 'sample'"
             @click="measurementMode = 'sample'"
           >
-            Send Physical Sample Suit
+            {{ $tr("Send Physical Sample Suit") }}
           </button>
         </div>
 
         <!-- Tab A: Manual Measurements Form -->
         <div v-if="measurementMode === 'manual'" class="space-y-8">
-          <p class="text-sm text-brand-charcoal">All standalone packages require the shirt and trouser measurements marked * below. If you cannot supply them, choose to send a fitted sample set instead.</p>
+          <p class="text-sm text-brand-charcoal">{{ $tr("All standalone packages require the shirt and trouser measurements marked * below. If you cannot supply them, choose to send a fitted sample set instead.") }}</p>
           <!-- Saved Profile Quick-Fill (if user has saved profiles) -->
           <div v-if="savedProfiles.length > 0" class="bg-brand-cream/80 p-4 border border-brand-border">
             <label for="stitch-profile" class="text-[10px] uppercase tracking-luxury text-brand-gold font-bold block mb-1">
-              Load From Your Saved Measurement Profiles
+              {{ $tr("Load From Your Saved Measurement Profiles") }}
             </label>
-            <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-3 rtl:space-x-reverse">
               <select
                 id="stitch-profile"
                 v-model="selectedSavedProfileId"
                 class="flex-1 bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 @change="selectedSavedProfileId && applySavedProfile(selectedSavedProfileId)"
               >
-                <option :value="null">-- Choose a Saved Profile --</option>
+                <option :value="null">{{ $tr("-- Choose a Saved Profile --") }}</option>
                 <option v-for="prof in savedProfiles" :key="prof.id" :value="prof.id">
                   {{ prof.profile_name }} ({{ prof.unit }})
                 </option>
@@ -639,7 +638,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 class="px-4 py-2 bg-brand-charcoal text-white text-xs uppercase tracking-luxury"
                 @click="applySavedProfile(selectedSavedProfileId)"
               >
-                Apply
+                {{ $tr("Apply") }}
               </button>
             </div>
           </div>
@@ -648,9 +647,9 @@ const finalizeBooking = (proceedToCheckout = false) => {
           <div class="flex items-center justify-between bg-brand-cream/50 p-4 border border-brand-border">
             <div>
               <h3 class="font-serif text-sm font-bold uppercase tracking-luxury text-brand-charcoal">
-                Measurement Unit
+                {{ $tr("Measurement Unit") }}
               </h3>
-              <p class="text-xs text-brand-muted">Select your preferred measuring scale</p>
+              <p class="text-xs text-brand-muted">{{ $tr("Select your preferred measuring scale") }}</p>
             </div>
             <div class="flex border border-brand-border bg-white text-xs">
               <button
@@ -659,7 +658,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 :aria-pressed="measurementUnit === 'inches'"
                         @click="measurementUnit = 'inches'"
               >
-                Inches
+                {{ $tr("Inches") }}
               </button>
               <button
                 class="px-4 py-1.5 font-medium transition-colors"
@@ -667,7 +666,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 :aria-pressed="measurementUnit === 'cm'"
                         @click="measurementUnit = 'cm'"
               >
-                Centimeters
+                {{ $tr("Centimeters") }}
               </button>
             </div>
           </div>
@@ -675,12 +674,12 @@ const finalizeBooking = (proceedToCheckout = false) => {
           <!-- Shirt Measurements (2 Columns) -->
           <div>
             <h4 class="font-serif text-base font-bold text-brand-charcoal uppercase tracking-luxury mb-4 text-brand-gold">
-              Shirt / Kameez ({{ measurementUnit }})
+              {{ $tr("Shirt / Kameez (") }}{{ measurementUnit }})
             </h4>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <label for="stitch-shirt-length" class="text-[10px] uppercase text-brand-muted block mb-1">Shirt Length *</label>
-                <input
+                <label for="stitch-shirt-length" class="text-[10px] uppercase text-brand-muted block mb-1">{{ $tr("Shirt Length *") }}</label>
+                <input dir="ltr"
                   id="stitch-shirt-length"
                   v-model.number="manualMeasurements.shirt_length"
                   required
@@ -694,8 +693,8 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-shoulder" class="text-[10px] uppercase text-brand-muted block mb-1">Shoulder Width *</label>
-                <input
+                <label for="stitch-shoulder" class="text-[10px] uppercase text-brand-muted block mb-1">{{ $tr("Shoulder Width *") }}</label>
+                <input dir="ltr"
                   id="stitch-shoulder"
                   v-model.number="manualMeasurements.shoulder"
                   required
@@ -709,8 +708,8 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-chest" class="text-[10px] uppercase text-brand-muted block mb-1">Chest / Bust *</label>
-                <input
+                <label for="stitch-chest" class="text-[10px] uppercase text-brand-muted block mb-1">{{ $tr("Chest / Bust *") }}</label>
+                <input dir="ltr"
                   id="stitch-chest"
                   v-model.number="manualMeasurements.chest"
                   required
@@ -724,8 +723,8 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-waist" class="text-[10px] uppercase text-brand-muted block mb-1">Waist *</label>
-                <input
+                <label for="stitch-waist" class="text-[10px] uppercase text-brand-muted block mb-1">{{ $tr("Waist *") }}</label>
+                <input dir="ltr"
                   id="stitch-waist"
                   v-model.number="manualMeasurements.waist"
                   required
@@ -739,8 +738,8 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-hips" class="text-[10px] uppercase text-brand-muted block mb-1">Hips *</label>
-                <input
+                <label for="stitch-hips" class="text-[10px] uppercase text-brand-muted block mb-1">{{ $tr("Hips *") }}</label>
+                <input dir="ltr"
                   id="stitch-hips"
                   v-model.number="manualMeasurements.hips"
                   required
@@ -754,8 +753,8 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-sleeve-length" class="text-[10px] uppercase text-brand-muted block mb-1">Sleeve Length *</label>
-                <input
+                <label for="stitch-sleeve-length" class="text-[10px] uppercase text-brand-muted block mb-1">{{ $tr("Sleeve Length *") }}</label>
+                <input dir="ltr"
                   id="stitch-sleeve-length"
                   v-model.number="manualMeasurements.sleeve_length"
                   required
@@ -769,8 +768,8 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-armhole" class="text-[10px] uppercase text-brand-muted block mb-1">Armhole</label>
-                <input
+                <label for="stitch-armhole" class="text-[10px] uppercase text-brand-muted block mb-1">{{ $tr("Armhole") }}</label>
+                <input dir="ltr"
                   id="stitch-armhole"
                   v-model.number="manualMeasurements.armhole"
                   type="number"
@@ -782,8 +781,8 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-daman" class="text-[10px] uppercase text-brand-muted block mb-1">Daman (Flair)</label>
-                <input
+                <label for="stitch-daman" class="text-[10px] uppercase text-brand-muted block mb-1">{{ $tr("Daman (Flair)") }}</label>
+                <input dir="ltr"
                   id="stitch-daman"
                   v-model.number="manualMeasurements.daman"
                   type="number"
@@ -800,12 +799,12 @@ const finalizeBooking = (proceedToCheckout = false) => {
           <!-- Trouser Measurements -->
           <div>
             <h4 class="font-serif text-base font-bold text-brand-charcoal uppercase tracking-luxury mb-4 text-brand-gold">
-              Trouser / Shalwar ({{ measurementUnit }})
+              {{ $tr("Trouser / Shalwar (") }}{{ measurementUnit }})
             </h4>
             <div class="grid grid-cols-3 gap-4">
               <div>
-                <label for="stitch-trouser-length" class="text-[10px] uppercase text-brand-muted block mb-1">Trouser Length *</label>
-                <input
+                <label for="stitch-trouser-length" class="text-[10px] uppercase text-brand-muted block mb-1">{{ $tr("Trouser Length *") }}</label>
+                <input dir="ltr"
                   id="stitch-trouser-length"
                   v-model.number="manualMeasurements.trouser_length"
                   required
@@ -819,8 +818,8 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-trouser-waist" class="text-[10px] uppercase text-brand-muted block mb-1">Trouser Waist *</label>
-                <input
+                <label for="stitch-trouser-waist" class="text-[10px] uppercase text-brand-muted block mb-1">{{ $tr("Trouser Waist *") }}</label>
+                <input dir="ltr"
                   id="stitch-trouser-waist"
                   v-model.number="manualMeasurements.trouser_waist"
                   required
@@ -834,8 +833,8 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-pancha" class="text-[10px] uppercase text-brand-muted block mb-1">Pancha / Opening</label>
-                <input
+                <label for="stitch-pancha" class="text-[10px] uppercase text-brand-muted block mb-1">{{ $tr("Pancha / Opening") }}</label>
+                <input dir="ltr"
                   id="stitch-pancha"
                   v-model.number="manualMeasurements.pancha"
                   type="number"
@@ -858,31 +857,31 @@ const finalizeBooking = (proceedToCheckout = false) => {
             </svg>
           </div>
           <h3 class="font-serif text-lg font-bold text-brand-charcoal">
-            Send a Well-Fitted Sample Suit
+            {{ $tr("Send a Well-Fitted Sample Suit") }}
           </h3>
           <p class="text-xs text-brand-muted leading-relaxed">
-            Pack a well-fitting shirt and trousers with your fabric. The atelier uses both pieces as the fit reference and records their arrival before starting work.
+            {{ $tr("Pack a well-fitting shirt and trousers with your fabric. The atelier uses both pieces as the fit reference and records their arrival before starting work.") }}
           </p>
           <ul class="text-xs text-brand-charcoal space-y-2 pt-2">
-            <li>Include the order number inside the package. Wait for the atelier to confirm its courier address before shipping.</li>
-            <li>The sample garments are returned with your finished order. Measurements are not automatically saved to your account.</li>
+            <li>{{ $tr("Include the order number inside the package. Wait for the atelier to confirm its courier address before shipping.") }}</li>
+            <li>{{ $tr("The sample garments are returned with your finished order. Measurements are not automatically saved to your account.") }}</li>
           </ul>
         </div>
 
-        <p v-if="measurementError" role="alert" class="text-red-800">{{ measurementError }}</p>
+        <p v-if="measurementError" role="alert" class="text-red-800">{{ $tr(measurementError) }}</p>
         <!-- Navigation Buttons -->
         <div class="pt-6 border-t border-brand-border flex items-center justify-between">
           <button
             class="px-6 py-3 border border-brand-border text-xs uppercase tracking-luxury text-brand-charcoal hover:bg-brand-cream"
             @click="goToStep(1)"
           >
-            ← Back to Styling
+            {{ $tr("← Back to Styling") }}
           </button>
           <button
             class="px-8 py-3.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors"
             @click="goToStep(3)"
           >
-            Review & Handover →
+            {{ $tr("Review & Handover →") }}
           </button>
         </div>
       </div>
@@ -892,11 +891,11 @@ const finalizeBooking = (proceedToCheckout = false) => {
         <!-- Fabric Handover Selection -->
         <div>
           <h2 class="font-serif text-lg sm:text-xl font-bold uppercase tracking-luxury text-brand-charcoal mb-4">
-            Fabric Delivery Method
+            {{ $tr("Fabric Delivery Method") }}
           </h2>
           <div class="border border-brand-border p-4">
-            <p class="font-semibold">Send fabric by courier</p>
-            <p>Wait for the atelier to confirm the shipping address and handover instructions before sending any fabric or sample garment.</p>
+            <p class="font-semibold">{{ $tr("Send fabric by courier") }}</p>
+            <p>{{ $tr("Wait for the atelier to confirm the shipping address and handover instructions before sending any fabric or sample garment.") }}</p>
           </div>
         </div>
 
@@ -904,30 +903,30 @@ const finalizeBooking = (proceedToCheckout = false) => {
         <div class="bg-brand-cream border border-brand-border p-6 sm:p-8 space-y-6">
           <div class="border-b border-brand-border pb-4">
             <h3 class="font-serif text-lg font-bold uppercase tracking-luxury text-brand-charcoal">
-              Custom Stitching Summary
+              {{ $tr("Custom Stitching Summary") }}
             </h3>
-            <p class="text-xs text-brand-muted">Review your specifications before booking</p>
+            <p class="text-xs text-brand-muted">{{ $tr("Review your specifications before booking") }}</p>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
-              <span class="text-brand-muted uppercase text-[10px] block">Selected Package</span>
+              <span class="text-brand-muted uppercase text-[10px] block">{{ $tr("Selected Package") }}</span>
               <span class="font-serif font-bold text-brand-charcoal text-sm">{{ selectedServiceName }}</span>
             </div>
             <div>
-              <span class="text-brand-muted uppercase text-[10px] block">Estimated Turnaround</span>
-              <span class="font-medium text-brand-charcoal">{{ selectedServiceDays }} working days</span>
+              <span class="text-brand-muted uppercase text-[10px] block">{{ $tr("Estimated Turnaround") }}</span>
+              <span class="font-medium text-brand-charcoal">{{ selectedServiceDays }} {{ $tr("working days") }}</span>
             </div>
             <div>
-              <span class="text-brand-muted uppercase text-[10px] block">Styling Choices</span>
+              <span class="text-brand-muted uppercase text-[10px] block">{{ $tr("Styling Choices") }}</span>
               <span class="text-brand-charcoal">
-                {{ neckStyle }} · {{ sleeveStyle }} · {{ trouserStyle }}
+                {{ $tr(neckStyle ?? "") }} · {{ $tr(sleeveStyle ?? "") }} · {{ $tr(trouserStyle ?? "") }}
               </span>
             </div>
             <div>
-              <span class="text-brand-muted uppercase text-[10px] block">Measurement Method</span>
+              <span class="text-brand-muted uppercase text-[10px] block">{{ $tr("Measurement Method") }}</span>
               <span class="text-brand-charcoal font-medium">
-                {{ measurementMode === 'manual' ? 'Online Custom Form' : 'Fitted Shirt & Trousers by Courier' }}
+                {{ measurementMode === 'manual' ? $tr("Online Custom Form") : $tr("Fitted Shirt & Trousers by Courier") }}
               </span>
             </div>
           </div>
@@ -935,7 +934,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
           <!-- Total Stitching Fee -->
           <div class="pt-4 border-t border-brand-border flex items-baseline justify-between">
             <span class="font-serif text-base font-bold text-brand-charcoal uppercase tracking-luxury">
-              Estimated Stitching Fee
+              {{ $tr("Estimated Stitching Fee") }}
             </span>
             <span class="font-serif text-2xl font-bold text-brand-charcoal">
               {{ formatPrice(selectedServicePrice) }}
@@ -944,7 +943,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
         </div>
 
         <!-- Advance notice -->
-        <div class="border border-brand-gold bg-brand-cream p-5 text-xs text-brand-charcoal leading-relaxed flex items-start space-x-3">
+        <div class="border border-brand-gold bg-brand-cream p-5 text-xs text-brand-charcoal leading-relaxed flex items-start space-x-3 rtl:space-x-reverse">
           <div class="text-brand-gold shrink-0 mt-0.5">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -952,10 +951,10 @@ const finalizeBooking = (proceedToCheckout = false) => {
           </div>
           <div>
             <strong class="text-brand-charcoal uppercase tracking-wider block mb-1">
-              Advance Payment Policy for Atelier Stitching
+              {{ $tr("Advance Payment Policy for Atelier Stitching") }}
             </strong>
             <span>
-              Checkout will show your advance and which payment method is available. Tailoring starts after the atelier verifies the advance and receives your fabric and any required sample garments.
+              {{ $tr("Checkout will show your advance and which payment method is available. Tailoring starts after the atelier verifies the advance and receives your fabric and any required sample garments.") }}
             </span>
           </div>
         </div>
@@ -966,7 +965,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
             class="w-full sm:w-auto px-6 py-3 border border-brand-border text-xs uppercase tracking-luxury text-brand-charcoal hover:bg-brand-cream"
             @click="goToStep(2)"
           >
-            ← Back to Measurements
+            {{ $tr("← Back to Measurements") }}
           </button>
 
           <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
@@ -974,13 +973,13 @@ const finalizeBooking = (proceedToCheckout = false) => {
               class="w-full sm:w-auto px-8 py-4 border border-brand-charcoal text-brand-charcoal hover:bg-brand-charcoal hover:text-white text-xs uppercase tracking-luxury font-medium transition-colors"
               @click="finalizeBooking(false)"
             >
-              Add to Shopping Bag
+              {{ $tr("Add to Shopping Bag") }}
             </button>
             <button
               class="w-full sm:w-auto px-8 py-4 bg-brand-charcoal text-white hover:bg-brand-gold text-xs uppercase tracking-luxury font-medium transition-colors shadow-md"
               @click="finalizeBooking(true)"
             >
-              Book & Checkout Now →
+              {{ $tr("Book & Checkout Now →") }}
             </button>
           </div>
         </div>

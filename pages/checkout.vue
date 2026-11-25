@@ -364,155 +364,155 @@ onBeforeUnmount(() => {
 <template>
   <div class="bg-brand-white min-h-screen py-10 sm:py-16">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-xs uppercase text-brand-muted mb-8">
-        <NuxtLink to="/">Home</NuxtLink><span aria-hidden="true">/</span>
-        <NuxtLink to="/shop">Shop</NuxtLink><span aria-hidden="true">/</span>
-        <span aria-current="page" class="font-semibold text-brand-charcoal">Checkout</span>
+      <nav :aria-label="$tr('Breadcrumb')" class="flex items-center gap-2 text-xs uppercase text-brand-muted mb-8">
+        <NuxtLink to="/">{{ $tr("Home") }}</NuxtLink><span aria-hidden="true">/</span>
+        <NuxtLink to="/shop">{{ $tr("Shop") }}</NuxtLink><span aria-hidden="true">/</span>
+        <span aria-current="page" class="font-semibold text-brand-charcoal">{{ $tr("Checkout") }}</span>
       </nav>
 
       <section v-if="pendingOrder" class="max-w-2xl mx-auto border border-brand-border bg-brand-cream/40 p-6 sm:p-12 space-y-6">
-        <h1 ref="orderTitle" tabindex="-1" class="font-serif text-3xl font-bold">Order received</h1>
-        <p v-if="orderInactive">This order is no longer active. Do not send a payment.</p>
-        <p v-else-if="pendingOrder.payment_status === 'paid'">Your payment has been recorded.</p>
-        <p v-else-if="pendingOrder.payment_status === 'refunded'">A refund has been recorded. Check the order status before taking any further action.</p>
-        <p v-else>Your order has been submitted. Save your order number and check its status before making any additional payment.</p>
+        <h1 ref="orderTitle" tabindex="-1" class="font-serif text-3xl font-bold">{{ $tr("Order received") }}</h1>
+        <p v-if="orderInactive">{{ $tr("This order is no longer active. Do not send a payment.") }}</p>
+        <p v-else-if="pendingOrder.payment_status === 'paid'">{{ $tr("Your payment has been recorded.") }}</p>
+        <p v-else-if="pendingOrder.payment_status === 'refunded'">{{ $tr("A refund has been recorded. Check the order status before taking any further action.") }}</p>
+        <p v-else>{{ $tr("Your order has been submitted. Save your order number and check its status before making any additional payment.") }}</p>
         <dl class="grid grid-cols-2 gap-3 border border-brand-border bg-white p-4">
-          <dt>Order number</dt><dd class="font-bold break-all">{{ pendingOrder.order_number }}</dd>
-          <dt>Total</dt><dd class="font-bold">{{ formatPrice(pendingOrder.total_amount) }}</dd>
+          <dt>{{ $tr("Order number") }}</dt><dd class="font-bold break-all"><bdi dir="ltr">{{ pendingOrder.order_number }}</bdi></dd>
+          <dt>{{ $tr("Total") }}</dt><dd class="font-bold">{{ formatPrice(pendingOrder.total_amount) }}</dd>
           <template v-if="Number(pendingOrder.advance_due) > 0">
-            <dt>Tailoring advance</dt><dd class="font-semibold">{{ formatPrice(pendingOrder.advance_due!) }}</dd>
-            <dt>Balance after advance</dt><dd class="font-semibold">{{ formatPrice(pendingOrder.balance_due ?? 0) }}</dd>
+            <dt>{{ $tr("Tailoring advance") }}</dt><dd class="font-semibold">{{ formatPrice(pendingOrder.advance_due!) }}</dd>
+            <dt>{{ $tr("Balance after advance") }}</dt><dd class="font-semibold">{{ formatPrice(pendingOrder.balance_due ?? 0) }}</dd>
           </template>
         </dl>
         <div v-if="pendingOrder.payment_instructions && pendingOrder.next_payment_amount != null" class="border border-brand-border bg-white p-4 space-y-2">
-          <h2 class="font-semibold">Verified bank transfer instructions</h2>
-          <p><strong>{{ pendingOrder.next_payment_type === 'advance' ? 'Advance to send now' : 'Amount to send now' }}: {{ formatPrice(pendingOrder.next_payment_amount) }}</strong></p>
-          <p class="whitespace-pre-wrap break-words">{{ pendingOrder.payment_instructions }}</p>
-          <p>Use your order number as the payment reference if your bank allows it.</p>
-          <p v-if="pendingOrder.next_payment_type === 'advance'">The store must verify the advance before tailoring begins. Before sending the balance, check order tracking and confirm the amount with the store. Use the same verified bank transfer method and order reference. The balance must be paid before dispatch.</p>
+          <h2 class="font-semibold">{{ $tr("Verified bank transfer instructions") }}</h2>
+          <p><strong>{{ pendingOrder.next_payment_type === 'advance' ? $tr("Advance to send now") : $tr("Amount to send now") }}: {{ formatPrice(pendingOrder.next_payment_amount) }}</strong></p>
+          <p dir="auto" class="whitespace-pre-wrap break-words">{{ pendingOrder.payment_instructions }}</p>
+          <p>{{ $tr("Use your order number as the payment reference if your bank allows it.") }}</p>
+          <p v-if="pendingOrder.next_payment_type === 'advance'">{{ $tr("The store must verify the advance before tailoring begins. Before sending the balance, check order tracking and confirm the amount with the store. Use the same verified bank transfer method and order reference. The balance must be paid before dispatch.") }}</p>
         </div>
-        <p v-else-if="!orderInactive && !paymentSettled && Number(pendingOrder.total_amount) > 0 && pendingOrder.payment_method === 'bank_transfer'">Verified transfer instructions are unavailable. Contact the store about this order before sending payment.</p>
-        <p v-else-if="!orderInactive && !paymentSettled && pendingOrder.payment_method === 'cod' && Number(pendingOrder.advance_due) === 0">Cash on delivery. The store may contact you to confirm your order before dispatch.</p>
-        <p v-if="codConfirmationDeadline">If not confirmed by {{ codConfirmationDeadline }} Pakistan time, your COD order expires and the reserved stock is released.</p>
+        <p v-else-if="!orderInactive && !paymentSettled && Number(pendingOrder.total_amount) > 0 && pendingOrder.payment_method === 'bank_transfer'">{{ $tr("Verified transfer instructions are unavailable. Contact the store about this order before sending payment.") }}</p>
+        <p v-else-if="!orderInactive && !paymentSettled && pendingOrder.payment_method === 'cod' && Number(pendingOrder.advance_due) === 0">{{ $tr("Cash on delivery. The store may contact you to confirm your order before dispatch.") }}</p>
+        <p v-if="codConfirmationDeadline">{{ $tr("If not confirmed by") }} {{ codConfirmationDeadline }} {{ $tr("Pakistan time, your COD order expires and the reserved stock is released.") }}</p>
         <div v-if="pendingOrder.tracking_token" class="space-y-2">
-          <label for="order-tracking-code" class="block font-semibold">Private tracking code</label>
-          <p id="save-tracking-note">Save this code with your order number. Keep it private.</p>
-          <input id="order-tracking-code" readonly :value="pendingOrder.tracking_token" aria-describedby="save-tracking-note" class="w-full px-3 py-2 bg-white border border-brand-border font-mono">
-          <button type="button" class="outline-action" @click="copyTrackingCode">Copy tracking code</button>
-          <p aria-live="polite">{{ copyMessage }}</p>
+          <label for="order-tracking-code" class="block font-semibold">{{ $tr("Private tracking code") }}</label>
+          <p id="save-tracking-note">{{ $tr("Save this code with your order number. Keep it private.") }}</p>
+          <input dir="ltr" id="order-tracking-code" readonly :value="pendingOrder.tracking_token" aria-describedby="save-tracking-note" class="w-full px-3 py-2 bg-white border border-brand-border font-mono">
+          <button type="button" class="outline-action" @click="copyTrackingCode">{{ $tr("Copy tracking code") }}</button>
+          <p aria-live="polite">{{ $tr(copyMessage) }}</p>
         </div>
         <OrderReceiptActions v-if="pendingOrder.receipt" :receipt="pendingOrder.receipt" :tracking-code="pendingOrder.tracking_token" />
-        <button v-if="pendingOrder.tracking_token" type="button" class="block w-fit primary-action" @click="openTracking">Track order status</button>
-        <NuxtLink v-else to="/track-order" class="block w-fit primary-action">Track order status</NuxtLink>
+        <button v-if="pendingOrder.tracking_token" type="button" class="block w-fit primary-action" @click="openTracking">{{ $tr("Track order status") }}</button>
+        <NuxtLink v-else to="/track-order" class="block w-fit primary-action">{{ $tr("Track order status") }}</NuxtLink>
       </section>
 
-      <p v-else-if="!ready" role="status">Loading your bag…</p>
+      <p v-else-if="!ready" role="status">{{ $tr("Loading your bag…") }}</p>
       <section v-else-if="!cart.items.length" class="max-w-md mx-auto text-center py-16 space-y-5">
-        <h1 class="font-serif text-3xl">Your bag is empty</h1>
-        <NuxtLink to="/shop" class="inline-block primary-action">Explore the collection</NuxtLink>
+        <h1 class="font-serif text-3xl">{{ $tr("Your bag is empty") }}</h1>
+        <NuxtLink to="/shop" class="inline-block primary-action">{{ $tr("Explore the collection") }}</NuxtLink>
       </section>
 
       <form v-else class="grid grid-cols-1 lg:grid-cols-12 gap-7 lg:gap-12" @submit.prevent="placeOrder">
         <div class="lg:col-span-7 space-y-8">
-          <h1 class="font-serif text-3xl font-bold">Checkout &amp; delivery</h1>
+          <h1 class="font-serif text-3xl font-bold">{{ $tr("Checkout & delivery") }}</h1>
           <div class="lg:hidden border border-brand-border bg-brand-cream/40 p-4 space-y-2">
             <div aria-live="polite" aria-atomic="true">
               <dl v-if="quote && !quoteLoading" class="space-y-1 text-sm">
                 <div class="flex flex-wrap justify-between gap-x-4 gap-y-1 text-base font-semibold">
-                  <dt>Order total</dt><dd>{{ formatPrice(quote.total_amount) }}</dd>
+                  <dt>{{ $tr("Order total") }}</dt><dd>{{ formatPrice(quote.total_amount) }}</dd>
                 </div>
                 <div v-if="quote.requires_deposit" class="flex flex-wrap justify-between gap-x-4 gap-y-1">
-                  <dt>Advance after placing</dt><dd class="font-semibold">{{ formatPrice(quote.advance_due) }}</dd>
+                  <dt>{{ $tr("Advance after placing") }}</dt><dd class="font-semibold">{{ formatPrice(quote.advance_due) }}</dd>
                 </div>
                 <div v-if="quote.requires_deposit" class="flex flex-wrap justify-between gap-x-4 gap-y-1">
-                  <dt>Balance before dispatch</dt><dd class="font-semibold">{{ formatPrice(quote.balance_due) }}</dd>
+                  <dt>{{ $tr("Balance before dispatch") }}</dt><dd class="font-semibold">{{ formatPrice(quote.balance_due) }}</dd>
                 </div>
               </dl>
-              <p v-else class="text-sm">{{ quoteError ? 'Order total unavailable' : 'Checking your order total…' }}</p>
+              <p v-else class="text-sm">{{ quoteError ? $tr("Order total unavailable") : $tr("Checking your order total…") }}</p>
             </div>
-            <a href="#order-summary" class="inline-block py-1 text-sm underline underline-offset-4">View items, shipping and discounts</a>
+            <a href="#order-summary" class="inline-block py-1 text-sm underline underline-offset-4">{{ $tr("View items, shipping and discounts") }}</a>
           </div>
           <fieldset class="space-y-4" :disabled="submitting || retryWithSameDetails">
-            <legend class="font-serif font-bold mb-3">1. Contact and delivery details</legend>
+            <legend class="font-serif font-bold mb-3">{{ $tr("1. Contact and delivery details") }}</legend>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div><label for="customer-name">Full name *</label><input id="customer-name" v-model="customer.customer_name" class="checkout-input" autocomplete="name" maxlength="255" required></div>
-              <div><label for="customer-phone">Mobile phone *</label><input id="customer-phone" v-model="customer.customer_phone" class="checkout-input" type="tel" autocomplete="tel" maxlength="50" required></div>
-              <div><label for="customer-email">Email (optional)</label><input id="customer-email" v-model="customer.customer_email" class="checkout-input" type="email" autocomplete="email" maxlength="255"></div>
-              <div><label for="customer-city">City *</label><input id="customer-city" v-model="customer.city" class="checkout-input" autocomplete="address-level2" maxlength="100" required></div>
+              <div><label for="customer-name">{{ $tr("Full name *") }}</label><input id="customer-name" v-model="customer.customer_name" class="checkout-input" autocomplete="name" maxlength="255" required></div>
+              <div><label for="customer-phone">{{ $tr("Mobile phone *") }}</label><input dir="ltr" id="customer-phone" v-model="customer.customer_phone" class="checkout-input" type="tel" autocomplete="tel" maxlength="50" required></div>
+              <div><label for="customer-email">{{ $tr("Email (optional)") }}</label><input dir="ltr" id="customer-email" v-model="customer.customer_email" class="checkout-input" type="email" autocomplete="email" maxlength="255"></div>
+              <div><label for="customer-city">{{ $tr("City *") }}</label><input id="customer-city" v-model="customer.city" class="checkout-input" autocomplete="address-level2" maxlength="100" required></div>
             </div>
-            <div><label for="customer-address">Street address *</label><textarea id="customer-address" v-model="customer.shipping_address" class="checkout-input" autocomplete="street-address" rows="2" maxlength="500" required /></div>
-            <div><label for="customer-notes">Delivery notes (optional)</label><textarea id="customer-notes" v-model="customer.notes" class="checkout-input" rows="2" maxlength="1000" /></div>
+            <div><label for="customer-address">{{ $tr("Street address *") }}</label><textarea id="customer-address" v-model="customer.shipping_address" class="checkout-input" autocomplete="street-address" rows="2" maxlength="500" required /></div>
+            <div><label for="customer-notes">{{ $tr("Delivery notes (optional)") }}</label><textarea id="customer-notes" v-model="customer.notes" class="checkout-input" rows="2" maxlength="1000" /></div>
           </fieldset>
 
           <fieldset class="space-y-3" :disabled="submitting || retryWithSameDetails">
-            <legend class="font-serif font-bold mb-3">2. Payment method</legend>
+            <legend class="font-serif font-bold mb-3">{{ $tr("2. Payment method") }}</legend>
             <label v-for="option in quote?.payment_options || []" :key="option.id" class="flex items-center gap-3 border border-brand-border p-4 cursor-pointer">
               <input v-model="customer.payment_method" name="payment_method" type="radio" :value="option.id" class="accent-brand-charcoal">
-              <span>{{ option.label }}</span>
+              <span>{{ $tr(option.label) }}</span>
             </label>
-            <p v-if="quote && !quote.payment_options.length" role="alert" class="border border-brand-border bg-brand-cream p-4">{{ quote.checkout_block_reason || 'No payment method is available for this bag.' }}</p>
-            <p v-else-if="quote?.requires_deposit" class="text-sm bg-brand-cream border border-brand-border p-4">For this tailoring order, both payments are by bank transfer. You’ll see the verified instructions after placing the order. The store verifies the advance before starting work, and the balance must be paid before dispatch.</p>
+            <p v-if="quote && !quote.payment_options.length" role="alert" class="border border-brand-border bg-brand-cream p-4">{{ $tr(quote.checkout_block_reason || "No payment method is available for this bag.") }}</p>
+            <p v-else-if="quote?.requires_deposit" class="text-sm bg-brand-cream border border-brand-border p-4">{{ $tr("For this tailoring order, both payments are by bank transfer. You’ll see the verified instructions after placing the order. The store verifies the advance before starting work, and the balance must be paid before dispatch.") }}</p>
           </fieldset>
 
           <section v-if="requiresOtp" aria-labelledby="otp-heading" class="border border-brand-border bg-brand-cream p-4 space-y-3">
-            <h2 id="otp-heading" class="font-semibold">Verify your mobile number</h2>
-            <p v-if="!phoneVerified">We’ll send a four-digit code by SMS.</p>
+            <h2 id="otp-heading" class="font-semibold">{{ $tr("Verify your mobile number") }}</h2>
+            <p v-if="!phoneVerified">{{ $tr("We’ll send a four-digit code by SMS.") }}</p>
             <button v-if="!phoneVerified" type="button" class="outline-action" :disabled="otpSending || cooldown > 0 || !customer.customer_phone.trim()" @click="sendOtp">
-              {{ otpSending ? 'Sending…' : cooldown > 0 ? `Resend in ${cooldown}s` : otpSent ? 'Resend code' : 'Send SMS code' }}
+              {{ otpSending ? $tr("Sending…") : cooldown > 0 ? $tr("Resend in {arg0}s", { arg0: cooldown }) : otpSent ? $tr("Resend code") : $tr("Send SMS code") }}
             </button>
             <div v-if="otpSent && !phoneVerified" class="space-y-2">
-              <label for="otp-code">Verification code</label>
-              <input id="otp-code" ref="otpInput" v-model="otpCode" type="text" inputmode="numeric" pattern="[0-9]{4}" autocomplete="one-time-code" maxlength="4" class="checkout-input" @keydown.enter.prevent="verifyOtp">
-              <button type="button" :disabled="otpSending || otpVerifying || otpCode.length !== 4" class="outline-action" @click="verifyOtp">{{ otpVerifying ? 'Verifying…' : 'Verify code' }}</button>
+              <label for="otp-code">{{ $tr("Verification code") }}</label>
+              <input dir="ltr" id="otp-code" ref="otpInput" v-model="otpCode" type="text" inputmode="numeric" pattern="[0-9]{4}" autocomplete="one-time-code" maxlength="4" class="checkout-input" @keydown.enter.prevent="verifyOtp">
+              <button type="button" :disabled="otpSending || otpVerifying || otpCode.length !== 4" class="outline-action" @click="verifyOtp">{{ otpVerifying ? $tr("Verifying…") : $tr("Verify code") }}</button>
             </div>
-            <p v-if="otpMessage" role="status">{{ otpMessage }}</p>
-            <p v-if="otpError" role="alert" class="text-red-800">{{ otpError }}</p>
+            <p v-if="otpMessage" role="status">{{ $tr(otpMessage) }}</p>
+            <p v-if="otpError" role="alert" class="text-red-800">{{ $tr(otpError) }}</p>
           </section>
         </div>
 
         <section class="min-w-0 lg:col-span-5 space-y-4 border border-brand-border bg-brand-cream/40 p-4 sm:p-7 self-start" aria-labelledby="order-summary">
-          <h2 id="order-summary" tabindex="-1" class="scroll-mt-28 font-serif text-xl font-bold">Order summary ({{ itemCount }})</h2>
+          <h2 id="order-summary" tabindex="-1" class="scroll-mt-28 font-serif text-xl font-bold">{{ $tr("Order summary (") }}{{ itemCount }})</h2>
           <ul class="divide-y divide-brand-border">
             <li v-for="item in cart.items" :key="item.id" class="flex flex-wrap justify-between gap-3 py-2">
               <div class="min-w-0 break-words">
                 {{ item.name }}<span v-if="item.size"> · {{ item.size }}</span> × {{ item.quantity }}
               </div>
               <span v-if="quotedLines.has(item.id)" class="shrink-0">{{ formatPrice(quotedLines.get(item.id)!) }}</span>
-              <button v-if="quoteError || (tailoringBlocked && (item.type === 'stitching' || item.customFitting))" type="button" :aria-label="`Remove ${item.name}`" class="underline text-red-800 shrink-0" :disabled="submitting || retryWithSameDetails" @click="cart.removeItem(item.id)">Remove</button>
+              <button v-if="quoteError || (tailoringBlocked && (item.type === 'stitching' || item.customFitting))" type="button" :aria-label="$tr('Remove {arg0}', { arg0: item.name })" class="underline text-red-800 shrink-0" :disabled="submitting || retryWithSameDetails" @click="cart.removeItem(item.id)">{{ $tr("Remove") }}</button>
             </li>
           </ul>
 
           <div class="space-y-2 border-t border-brand-border pt-3">
             <div v-if="appliedCoupon" class="flex flex-wrap items-center justify-between gap-2">
-              <span>Promo code: <strong>{{ appliedCoupon }}</strong></span>
-              <button type="button" class="outline-action" :disabled="quoteLoading || submitting || retryWithSameDetails" @click="removeCoupon">Remove promo code</button>
+              <span>{{ $tr("Promo code:") }} <strong>{{ appliedCoupon }}</strong></span>
+              <button type="button" class="outline-action" :disabled="quoteLoading || submitting || retryWithSameDetails" @click="removeCoupon">{{ $tr("Remove promo code") }}</button>
             </div>
             <template v-else>
-              <label for="promo-code">Promo code (optional)</label>
+              <label for="promo-code">{{ $tr("Promo code (optional)") }}</label>
               <div class="flex gap-2">
-                <input id="promo-code" v-model="couponInput" class="checkout-input !mt-0 min-w-0" maxlength="50" @keydown.enter.prevent="applyCoupon">
-                <button type="button" class="outline-action" :disabled="quoteLoading || submitting || retryWithSameDetails || !couponInput.trim()" @click="applyCoupon">Apply</button>
+                <input dir="ltr" id="promo-code" v-model="couponInput" class="checkout-input !mt-0 min-w-0" maxlength="50" @keydown.enter.prevent="applyCoupon">
+                <button type="button" class="outline-action" :disabled="quoteLoading || submitting || retryWithSameDetails || !couponInput.trim()" @click="applyCoupon">{{ $tr("Apply") }}</button>
               </div>
             </template>
-            <p v-if="couponError" role="alert" class="text-sm text-red-800">{{ couponError }}</p>
+            <p v-if="couponError" role="alert" class="text-sm text-red-800">{{ $tr(couponError) }}</p>
           </div>
 
-          <p v-if="quoteLoading" role="status">Checking prices and availability…</p>
+          <p v-if="quoteLoading" role="status">{{ $tr("Checking prices and availability…") }}</p>
           <div v-if="quoteError" role="alert" class="text-sm text-red-800 space-y-2">
-            <p>{{ quoteError }}</p>
-            <button type="button" class="outline-action" @click="updateQuote()">Retry price check</button>
+            <p>{{ $tr(quoteError) }}</p>
+            <button type="button" class="outline-action" @click="updateQuote()">{{ $tr("Retry price check") }}</button>
           </div>
           <dl v-if="quote" class="space-y-2 border-t border-brand-border pt-3">
-            <div class="flex justify-between"><dt>Subtotal</dt><dd>{{ formatPrice(quote.subtotal) }}</dd></div>
-            <div class="flex justify-between"><dt>Shipping</dt><dd>{{ Number(quote.shipping_fee) === 0 ? 'Free' : formatPrice(quote.shipping_fee) }}</dd></div>
-            <div v-if="Number(quote.discount_amount) > 0" class="flex justify-between"><dt>Discount</dt><dd>−{{ formatPrice(quote.discount_amount) }}</dd></div>
-            <div class="flex justify-between font-bold text-lg"><dt>Total</dt><dd>{{ formatPrice(quote.total_amount) }}</dd></div>
-            <div v-if="quote.requires_deposit" class="flex flex-wrap justify-between gap-x-4 gap-y-1"><dt>Advance after placing</dt><dd class="font-semibold">{{ formatPrice(quote.advance_due) }}</dd></div>
-            <div v-if="quote.requires_deposit" class="flex flex-wrap justify-between gap-x-4 gap-y-1"><dt>Balance before dispatch</dt><dd class="font-semibold">{{ formatPrice(quote.balance_due) }}</dd></div>
+            <div class="flex justify-between"><dt>{{ $tr("Subtotal") }}</dt><dd>{{ formatPrice(quote.subtotal) }}</dd></div>
+            <div class="flex justify-between"><dt>{{ $tr("Shipping") }}</dt><dd>{{ Number(quote.shipping_fee) === 0 ? $tr("Free") : formatPrice(quote.shipping_fee) }}</dd></div>
+            <div v-if="Number(quote.discount_amount) > 0" class="flex justify-between"><dt>{{ $tr("Discount") }}</dt><dd>−{{ formatPrice(quote.discount_amount) }}</dd></div>
+            <div class="flex justify-between font-bold text-lg"><dt>{{ $tr("Total") }}</dt><dd>{{ formatPrice(quote.total_amount) }}</dd></div>
+            <div v-if="quote.requires_deposit" class="flex flex-wrap justify-between gap-x-4 gap-y-1"><dt>{{ $tr("Advance after placing") }}</dt><dd class="font-semibold">{{ formatPrice(quote.advance_due) }}</dd></div>
+            <div v-if="quote.requires_deposit" class="flex flex-wrap justify-between gap-x-4 gap-y-1"><dt>{{ $tr("Balance before dispatch") }}</dt><dd class="font-semibold">{{ formatPrice(quote.balance_due) }}</dd></div>
           </dl>
-          <p v-if="submitError" role="alert" class="text-red-800 text-sm">{{ submitError }}</p>
+          <p v-if="submitError" role="alert" class="text-red-800 text-sm">{{ $tr(submitError) }}</p>
           <button type="submit" :disabled="submitDisabled" class="w-full primary-action">
-            {{ submitting ? 'Submitting order…' : retryWithSameDetails ? 'Retry order safely' : 'Place order' }}
+            {{ submitting ? $tr("Submitting order…") : retryWithSameDetails ? $tr("Retry order safely") : $tr("Place order") }}
           </button>
         </section>
       </form>

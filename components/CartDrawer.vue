@@ -36,7 +36,7 @@ const formatPrice = (value: number) => {
       ref="dialog"
       aria-labelledby="shopping-bag-title"
       aria-modal="true"
-      class="storefront-dialog storefront-dialog--right fixed inset-y-0 left-auto right-0 m-0 h-[100dvh] max-h-none w-full max-w-md border-l border-brand-border bg-brand-white p-0 text-brand-charcoal shadow-2xl"
+      class="storefront-dialog storefront-dialog--right fixed inset-y-0 start-auto end-0 m-0 h-[100dvh] max-h-none w-full max-w-md border-s border-brand-border bg-brand-white p-0 text-brand-charcoal shadow-2xl"
       @cancel="onCancel"
       @keydown="onKeydown"
       @click.self="cart.closeCart()"
@@ -44,16 +44,16 @@ const formatPrice = (value: number) => {
       <div v-if="cart.isOpen" class="flex h-full min-h-0 flex-col">
         <!-- Drawer Header -->
         <div class="flex shrink-0 items-center justify-between border-b border-brand-border p-4 sm:p-6">
-          <div class="flex items-center space-x-2">
+          <div class="flex items-center space-x-2 rtl:space-x-reverse">
             <h2 id="shopping-bag-title" class="font-serif text-lg tracking-luxury uppercase text-brand-charcoal">
-              Shopping Bag
+              {{ $tr("Shopping Bag") }}
             </h2>
             <span class="text-xs font-medium text-brand-muted" aria-live="polite">({{ cart.totalItems }})</span>
           </div>
           <button
             type="button"
             class="text-brand-charcoal hover:text-brand-gold transition-colors p-2"
-            aria-label="Close bag"
+            :aria-label="$tr('Close bag')"
             data-dialog-initial-focus
             @click="cart.closeCart()"
           >
@@ -66,13 +66,13 @@ const formatPrice = (value: number) => {
         <!-- Free Delivery Threshold Bar -->
         <div class="shrink-0 border-b border-brand-border bg-brand-cream px-4 py-3 text-xs sm:px-6">
           <div v-if="remainingForFreeShipping > 0" class="text-brand-muted">
-            Add <span class="font-semibold text-brand-charcoal">{{ formatPrice(remainingForFreeShipping) }}</span> more for <span class="text-brand-gold font-medium">Free Delivery</span>
+            {{ $tr("Add {amount} more for Free Delivery", { amount: formatPrice(remainingForFreeShipping) }) }}
           </div>
-          <div v-else class="text-brand-gold font-medium flex items-center space-x-1">
+          <div v-else class="text-brand-gold font-medium flex items-center space-x-1 rtl:space-x-reverse">
             <svg class="w-4 h-4 text-brand-gold inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
-            <span>You have unlocked Free Nationwide Delivery!</span>
+            <span>{{ $tr("You have unlocked Free Nationwide Delivery!") }}</span>
           </div>
           <div class="w-full bg-brand-border h-1 mt-2 overflow-hidden">
             <div
@@ -91,14 +91,14 @@ const formatPrice = (value: number) => {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
             </div>
-            <p class="font-serif text-lg text-brand-charcoal mb-2">Your Bag is Empty</p>
-            <p class="text-xs text-brand-muted max-w-xs mb-6">Discover our latest Pret collection or book custom bespoke stitching tailored to your measurements.</p>
+            <p class="font-serif text-lg text-brand-charcoal mb-2">{{ $tr("Your Bag is Empty") }}</p>
+            <p class="text-xs text-brand-muted max-w-xs mb-6">{{ $tr("Discover our latest Pret collection or book custom bespoke stitching tailored to your measurements.") }}</p>
             <NuxtLink
               to="/shop"
               class="inline-block px-8 py-3 bg-brand-charcoal text-white text-xs uppercase tracking-luxury hover:bg-brand-gold transition-colors duration-200"
               @click="cart.closeCart()"
             >
-              Explore Collection
+              {{ $tr("Explore Collection") }}
             </NuxtLink>
           </div>
 
@@ -132,8 +132,8 @@ const formatPrice = (value: number) => {
                   </h3>
                   <button
                     type="button"
-                    class="ml-0.5 shrink-0 p-1.5 text-brand-muted transition-colors hover:text-red-700"
-                    :aria-label="`Remove ${item.name} from your bag`"
+                    class="ms-0.5 shrink-0 p-1.5 text-brand-muted transition-colors hover:text-red-700"
+                    :aria-label="$tr('Remove {arg0} from your bag', { arg0: item.name })"
                     @click="restoreFocusIfRemoved(() => cart.removeItem(item.id))"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,20 +143,20 @@ const formatPrice = (value: number) => {
                 </div>
 
                 <!-- Attributes -->
-                <div class="text-xs text-brand-muted mt-1 space-x-2">
-                  <span v-if="item.size" class="border border-brand-border px-1.5 py-0.5">Size: {{ item.size }}</span>
+                <div class="text-xs text-brand-muted mt-1 space-x-2 rtl:space-x-reverse">
+                  <span v-if="item.size" class="border border-brand-border px-1.5 py-0.5">{{ $tr("Size:") }} {{ item.size }}</span>
                   <span v-if="item.color">{{ item.color }}</span>
                 </div>
 
                 <!-- Custom Fitting Tag -->
-                <div v-if="item.customFitting" class="mt-2 inline-flex items-center space-x-1 text-[10px] uppercase font-medium tracking-wider text-brand-gold bg-brand-gold/10 px-2 py-0.5 border border-brand-gold/30">
-                  <span>Custom Fitted</span>
+                <div v-if="item.customFitting" class="mt-2 inline-flex items-center space-x-1 rtl:space-x-reverse text-[10px] uppercase font-medium tracking-wider text-brand-gold bg-brand-gold/10 px-2 py-0.5 border border-brand-gold/30">
+                  <span>{{ $tr("Custom Fitted") }}</span>
                 </div>
 
                 <!-- Standalone Tailoring Tag -->
                 <div v-if="item.type === 'stitching'" class="mt-2 text-[10px] text-brand-muted space-y-0.5">
-                  <p v-if="item.estimatedDays">Turnaround: {{ item.estimatedDays }} days</p>
-                  <p v-if="item.neckStyle">Neck: {{ item.neckStyle }}</p>
+                  <p v-if="item.estimatedDays">{{ $tr("Turnaround:") }} {{ item.estimatedDays }} {{ $tr("days") }}</p>
+                  <p v-if="item.neckStyle">{{ $tr("Neck:") }} {{ item.neckStyle }}</p>
                 </div>
               </div>
 
@@ -167,7 +167,7 @@ const formatPrice = (value: number) => {
                   <button
                     type="button"
                     class="min-h-7 min-w-7 px-2 py-1 text-xs text-brand-charcoal hover:bg-brand-cream transition-colors"
-                    :aria-label="`Decrease quantity of ${item.name}`"
+                    :aria-label="$tr('Decrease quantity of {arg0}', { arg0: item.name })"
                     @click="restoreFocusIfRemoved(() => cart.updateQuantity(item.id, -1))"
                   >
                     -
@@ -178,14 +178,14 @@ const formatPrice = (value: number) => {
                   <button
                     type="button"
                     class="min-h-7 min-w-7 px-2 py-1 text-xs text-brand-charcoal hover:bg-brand-cream transition-colors"
-                    :aria-label="`Increase quantity of ${item.name}`"
+                    :aria-label="$tr('Increase quantity of {arg0}', { arg0: item.name })"
                     @click="cart.updateQuantity(item.id, 1)"
                   >
                     +
                   </button>
                 </div>
                 <div v-else class="text-xs text-brand-muted">
-                  Bespoke Stitching
+                  {{ $tr("Bespoke Stitching") }}
                 </div>
 
                 <div class="text-sm font-medium text-brand-charcoal">
@@ -206,23 +206,23 @@ const formatPrice = (value: number) => {
             v-if="cart.hasTailoring"
             class="p-3 bg-brand-cream border border-brand-gold/40 text-[11px] text-brand-charcoal leading-relaxed"
           >
-            <span class="font-semibold text-brand-gold uppercase tracking-wider block mb-0.5">Custom Tailoring Notice</span>
-            Checkout will show the exact advance and available payment instructions. For privacy, tailoring measurements and reference photos are not saved if you reload or close this tab.
+            <span class="font-semibold text-brand-gold uppercase tracking-wider block mb-0.5">{{ $tr("Custom Tailoring Notice") }}</span>
+            {{ $tr("Checkout will show the exact advance and available payment instructions. For privacy, tailoring measurements and reference photos are not saved if you reload or close this tab.") }}
           </div>
 
           <!-- Price Calculation -->
           <div class="space-y-1.5 text-xs text-brand-muted">
             <div class="flex justify-between">
-              <span>Estimated subtotal</span>
+              <span>{{ $tr("Estimated subtotal") }}</span>
               <span class="text-brand-charcoal font-medium">{{ formatPrice(cart.subtotal) }}</span>
             </div>
             <div class="flex justify-between">
-              <span>Estimated Shipping</span>
-              <span v-if="cart.shippingFee === 0" class="text-brand-gold font-medium">Free</span>
+              <span>{{ $tr("Estimated Shipping") }}</span>
+              <span v-if="cart.shippingFee === 0" class="text-brand-gold font-medium">{{ $tr("Free") }}</span>
               <span v-else class="text-brand-charcoal">{{ formatPrice(cart.shippingFee) }}</span>
             </div>
             <div class="border-t border-brand-border pt-2 flex justify-between text-sm font-serif font-bold text-brand-charcoal">
-              <span>Estimated Total</span>
+              <span>{{ $tr("Estimated Total") }}</span>
               <span class="font-sans text-brand-charcoal">{{ formatPrice(cart.totalAmount) }}</span>
             </div>
           </div>
@@ -234,14 +234,14 @@ const formatPrice = (value: number) => {
               class="block w-full text-center py-3.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors duration-200"
               @click="cart.closeCart()"
             >
-              Proceed to Checkout
+              {{ $tr("Proceed to Checkout") }}
             </NuxtLink>
             <button
               type="button"
               class="block w-full text-center text-xs text-brand-muted hover:text-brand-charcoal underline underline-offset-4 py-1"
               @click="cart.closeCart()"
             >
-              Continue Shopping
+              {{ $tr("Continue Shopping") }}
             </button>
           </div>
         </div>

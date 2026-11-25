@@ -48,41 +48,41 @@ function groupOptions(group: FilterGroup) {
 
 <template>
   <div class="min-w-0 space-y-5">
-    <p v-if="facetsPending" role="status" class="text-sm">Loading available filters…</p>
+    <p v-if="facetsPending" role="status" class="text-sm">{{ $tr("Loading available filters…") }}</p>
     <div v-else-if="facetsFailed" role="alert" class="space-y-2 text-sm text-red-800">
-      <p>Some filters could not be loaded.</p>
-      <button type="button" class="catalog-outline" @click="emit('retry')">Retry filters</button>
+      <p>{{ $tr("Some filters could not be loaded.") }}</p>
+      <button type="button" class="catalog-outline" @click="emit('retry')">{{ $tr("Retry filters") }}</button>
     </div>
 
     <div v-for="group in groups" :key="group.key" v-show="group.options.length || selected[group.key]">
-      <label :for="`${filterId}-${group.key}`" class="block text-sm font-semibold mb-1">{{ group.name }}</label>
+      <label :for="`${filterId}-${group.key}`" class="block text-sm font-semibold mb-1">{{ $tr(group.name) }}</label>
       <select
         :id="`${filterId}-${group.key}`"
         :value="selected[group.key]"
         class="catalog-field"
         @change="emit('change', group.key, ($event.target as HTMLSelectElement).value)"
       >
-        <option value="">Any {{ group.name.toLowerCase() }}</option>
-        <option v-for="option in groupOptions(group)" :key="option.id" :value="option.id">{{ option.label }}</option>
+        <option value="">{{ $tr("Any") }} {{ group.name.toLowerCase() }}</option>
+        <option v-for="option in groupOptions(group)" :key="option.id" :value="option.id">{{ $tr(option.label) }}</option>
       </select>
     </div>
 
     <form class="border-t border-brand-border pt-4 space-y-3" @submit.prevent="submit">
       <fieldset>
-        <legend class="font-semibold text-sm mb-2">Price range (PKR)</legend>
+        <legend class="font-semibold text-sm mb-2">{{ $tr("Price range (PKR)") }}</legend>
         <div class="grid grid-cols-2 gap-2">
           <div class="min-w-0">
-            <label :for="`${filterId}-min`" class="block text-xs mb-1">Minimum</label>
+            <label :for="`${filterId}-min`" class="block text-xs mb-1">{{ $tr("Minimum") }}</label>
             <input :id="`${filterId}-min`" v-model="minInput" class="catalog-field" type="text" inputmode="decimal" maxlength="11" :aria-invalid="Boolean(priceError)" :aria-describedby="priceError ? `${filterId}-price-error` : undefined">
           </div>
           <div class="min-w-0">
-            <label :for="`${filterId}-max`" class="block text-xs mb-1">Maximum</label>
+            <label :for="`${filterId}-max`" class="block text-xs mb-1">{{ $tr("Maximum") }}</label>
             <input :id="`${filterId}-max`" v-model="maxInput" class="catalog-field" type="text" inputmode="decimal" maxlength="11" :aria-invalid="Boolean(priceError)" :aria-describedby="priceError ? `${filterId}-price-error` : undefined">
           </div>
         </div>
       </fieldset>
-      <p v-if="priceError" :id="`${filterId}-price-error`" role="alert" class="text-red-800 text-sm">{{ priceError }}</p>
-      <button type="submit" class="catalog-outline">Apply price range</button>
+      <p v-if="priceError" :id="`${filterId}-price-error`" role="alert" class="text-red-800 text-sm">{{ $tr(priceError) }}</p>
+      <button type="submit" class="catalog-outline">{{ $tr("Apply price range") }}</button>
     </form>
   </div>
 </template>

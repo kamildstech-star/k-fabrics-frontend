@@ -12,6 +12,7 @@ type CatalogResults = { data: CatalogProduct[]; meta: { current_page: number; la
 
 const { public: { apiBase, siteUrl } } = useRuntimeConfig()
 const route = useRoute()
+const { $tr: tr } = useNuxtApp()
 const router = useRouter()
 const mobileFilterOpen = ref(false)
 const closeFilters = () => { mobileFilterOpen.value = false }
@@ -88,12 +89,12 @@ const activeChips = computed(() => groups.value.flatMap(group => {
   const value = selected.value[group.key]
   if (!value) return []
   const label = group.options.find(option => option.id === value)?.label || value
-  return [{ key: group.key, text: `${group.name}: ${label}` }]
+  return [{ key: group.key, text: `${tr(group.name)}: ${tr(label)}` }]
 }))
 const filterCount = computed(() => activeChips.value.length + Number(Boolean(minPrice.value || maxPrice.value)))
 const pageTitle = computed(() => {
-  if (search.value) return `Search results for “${search.value}”`
-  return categories.value.find(category => category.id === selected.value.category)?.label || 'Ready-to-Wear Collection'
+  if (search.value) return tr("Search results for “{query}”", { query: search.value })
+  return tr(categories.value.find(category => category.id === selected.value.category)?.label || 'Ready-to-Wear Collection')
 })
 const title = computed(() => `${pageTitle.value}${page.value > 1 ? ` – Page ${page.value}` : ''} | K. Fabrics`)
 const adHocFilters = computed(() => Boolean(
@@ -164,15 +165,15 @@ const retryFacets = () => { void facetData.refresh(); if (categoryData.error.val
   <div class="min-h-screen bg-brand-white">
     <div class="border-b border-brand-border bg-brand-cream/50">
       <header class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 space-y-4">
-        <nav aria-label="Breadcrumb" class="flex items-center flex-wrap gap-2 text-xs text-brand-muted">
-          <NuxtLink to="/">Home</NuxtLink><span aria-hidden="true">/</span><NuxtLink to="/shop" aria-current="page">Shop</NuxtLink>
+        <nav :aria-label="$tr('Breadcrumb')" class="flex items-center flex-wrap gap-2 text-xs text-brand-muted">
+          <NuxtLink to="/">{{ $tr("Home") }}</NuxtLink><span aria-hidden="true">/</span><NuxtLink to="/shop" aria-current="page">{{ $tr("Shop") }}</NuxtLink>
         </nav>
         <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div class="min-w-0">
             <h1 class="font-serif text-3xl sm:text-4xl font-bold break-words">{{ pageTitle }}</h1>
             <p class="mt-1 text-sm" role="status">
-              <template v-if="catalog.pending.value">Loading products…</template>
-              <template v-else-if="!catalogFailed">{{ meta.total }} {{ meta.total === 1 ? 'product' : 'products' }}</template>
+              <template v-if="catalog.pending.value">{{ $tr("Loading products…") }}</template>
+              <template v-else-if="!catalogFailed">{{ meta.total }} {{ meta.total === 1 ? $tr("product") : $tr("products") }}</template>
             </p>
           </div>
           <div class="flex min-w-0 flex-wrap gap-2 items-end">
@@ -180,64 +181,64 @@ const retryFacets = () => { void facetData.refresh(); if (categoryData.error.val
               id="mobile-filter-trigger" type="button" class="catalog-outline lg:hidden shrink-0"
               aria-haspopup="dialog" :aria-expanded="mobileFilterOpen" aria-controls="mobile-catalog-filters"
               @click="mobileFilterOpen = true"
-            >Filters{{ filterCount ? ` (${filterCount})` : '' }}</button>
+            >{{ $tr("Filters") }}{{ filterCount ? ` (${filterCount})` : '' }}</button>
             <div class="min-w-0 flex-1 md:flex-none">
-              <label for="catalog-sort" class="block text-xs font-semibold mb-1">Sort by</label>
+              <label for="catalog-sort" class="block text-xs font-semibold mb-1">{{ $tr("Sort by") }}</label>
               <select id="catalog-sort" :value="sort" class="catalog-outline w-full min-w-0" @change="changeSort">
-                <option v-if="search" value="relevance">Best match</option><option value="newest">Newest</option>
-                <option value="price_asc">Price: low to high</option><option value="price_desc">Price: high to low</option>
+                <option v-if="search" value="relevance">{{ $tr("Best match") }}</option><option value="newest">{{ $tr("Newest") }}</option>
+                <option value="price_asc">{{ $tr("Price: low to high") }}</option><option value="price_desc">{{ $tr("Price: high to low") }}</option>
               </select>
             </div>
           </div>
         </div>
 
-        <ul v-if="activeChips.length || minPrice || maxPrice || search" aria-label="Active filters" class="flex flex-wrap gap-2">
-          <li v-if="search" class="max-w-full"><button type="button" class="catalog-outline break-words max-w-full" aria-label="Remove search" @click="patchQuery({ search: '', sort: '' })">Search: {{ search }} <span aria-hidden="true">×</span></button></li>
+        <ul v-if="activeChips.length || minPrice || maxPrice || search" :aria-label="$tr('Active filters')" class="flex flex-wrap gap-2">
+          <li v-if="search" class="max-w-full"><button type="button" class="catalog-outline break-words max-w-full" :aria-label="$tr('Remove search')" @click="patchQuery({ search: '', sort: '' })">{{ $tr("Search:") }} {{ search }} <span aria-hidden="true">×</span></button></li>
           <li v-for="chip in activeChips" :key="chip.key" class="max-w-full">
-            <button type="button" :aria-label="`Remove filter ${chip.text}`" class="catalog-outline break-words max-w-full" @click="changeFilter(chip.key, '')">{{ chip.text }} <span aria-hidden="true">×</span></button>
+            <button type="button" :aria-label="$tr('Remove filter {arg0}', { arg0: chip.text })" class="catalog-outline break-words max-w-full" @click="changeFilter(chip.key, '')">{{ chip.text }} <span aria-hidden="true">×</span></button>
           </li>
-          <li v-if="minPrice || maxPrice"><button type="button" class="catalog-outline" aria-label="Remove price range" @click="changePrice('', '')">Price: {{ minPrice || '0' }}–{{ maxPrice || 'any' }} <span aria-hidden="true">×</span></button></li>
-          <li v-if="filterCount"><button type="button" class="catalog-outline underline" @click="clearFilters">Clear filters</button></li>
+          <li v-if="minPrice || maxPrice"><button type="button" class="catalog-outline" :aria-label="$tr('Remove price range')" @click="changePrice('', '')">{{ $tr("Price:") }} {{ minPrice || '0' }}–{{ maxPrice || 'any' }} <span aria-hidden="true">×</span></button></li>
+          <li v-if="filterCount"><button type="button" class="catalog-outline underline" @click="clearFilters">{{ $tr("Clear filters") }}</button></li>
         </ul>
       </header>
     </div>
 
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-8">
-      <aside aria-label="Catalog filters" class="hidden lg:block">
+      <aside :aria-label="$tr('Catalog filters')" class="hidden lg:block">
         <CatalogFilters :groups="groups" :selected="selected" :min-price="minPrice" :max-price="maxPrice"
           :facets-pending="facetData.pending.value" :facets-failed="Boolean(facetData.error.value)"
           @retry="retryFacets" @change="changeFilter" @price="changePrice" />
       </aside>
 
-      <section class="min-w-0" aria-label="Product results" :aria-busy="catalog.pending.value">
+      <section class="min-w-0" :aria-label="$tr('Product results')" :aria-busy="catalog.pending.value">
         <div v-if="catalog.pending.value" class="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-6" aria-hidden="true">
           <div v-for="i in 6" :key="i" class="aspect-[3/4] bg-brand-cream animate-pulse" />
         </div>
         <div v-else-if="catalogFailed" role="alert" class="space-y-3 border border-brand-border p-6">
-          <h2 class="font-serif text-xl">We couldn’t load the collection</h2>
-          <p>Your search and filters are still selected.</p>
-          <button type="button" class="catalog-outline" @click="catalog.refresh()">Retry products</button>
+          <h2 class="font-serif text-xl">{{ $tr("We couldn’t load the collection") }}</h2>
+          <p>{{ $tr("Your search and filters are still selected.") }}</p>
+          <button type="button" class="catalog-outline" @click="catalog.refresh()">{{ $tr("Retry products") }}</button>
         </div>
         <div v-else-if="!products.length && page > 1 && meta.total > 0" class="space-y-3 border border-brand-border p-6">
-          <h2 class="font-serif text-xl">No products on this page</h2>
-          <button type="button" class="catalog-outline" @click="changePage(1)">Go to first page</button>
+          <h2 class="font-serif text-xl">{{ $tr("No products on this page") }}</h2>
+          <button type="button" class="catalog-outline" @click="changePage(1)">{{ $tr("Go to first page") }}</button>
         </div>
         <div v-else-if="!products.length" class="space-y-3 border border-brand-border p-6">
-          <h2 class="font-serif text-xl">No products match your selection</h2>
-          <p>Try a different search or remove a filter.</p>
-          <button v-if="filterCount" type="button" class="catalog-outline" @click="clearFilters">Clear filters</button>
-          <button v-else-if="search" type="button" class="catalog-outline" @click="patchQuery({ search: '', sort: '' })">Browse all products</button>
+          <h2 class="font-serif text-xl">{{ $tr("No products match your selection") }}</h2>
+          <p>{{ $tr("Try a different search or remove a filter.") }}</p>
+          <button v-if="filterCount" type="button" class="catalog-outline" @click="clearFilters">{{ $tr("Clear filters") }}</button>
+          <button v-else-if="search" type="button" class="catalog-outline" @click="patchQuery({ search: '', sort: '' })">{{ $tr("Browse all products") }}</button>
         </div>
         <div v-else class="grid grid-cols-[repeat(2,minmax(0,1fr))] md:grid-cols-[repeat(3,minmax(0,1fr))] gap-2 sm:gap-6">
           <ProductCard v-for="product in products" :key="product.id" :product="product" class="min-w-0" />
         </div>
 
-        <nav v-if="!catalogFailed && !catalog.pending.value && meta.last_page > 1" aria-label="Product pages" class="flex flex-wrap items-center justify-between gap-2 mt-8">
-          <NuxtLink v-if="page > 1" :to="pageLocation(page - 1)" class="catalog-outline" prefetch-on="interaction" aria-label="Previous product page">Previous</NuxtLink>
-          <span v-else class="catalog-outline opacity-50" aria-disabled="true">Previous</span>
-          <span class="text-sm">Page {{ meta.current_page }} of {{ meta.last_page }}</span>
-          <NuxtLink v-if="page < meta.last_page" :to="pageLocation(page + 1)" class="catalog-outline" prefetch-on="interaction" aria-label="Next product page">Next</NuxtLink>
-          <span v-else class="catalog-outline opacity-50" aria-disabled="true">Next</span>
+        <nav v-if="!catalogFailed && !catalog.pending.value && meta.last_page > 1" :aria-label="$tr('Product pages')" class="flex flex-wrap items-center justify-between gap-2 mt-8">
+          <NuxtLink v-if="page > 1" :to="pageLocation(page - 1)" class="catalog-outline" prefetch-on="interaction" :aria-label="$tr('Previous product page')">{{ $tr("Previous") }}</NuxtLink>
+          <span v-else class="catalog-outline opacity-50" aria-disabled="true">{{ $tr("Previous") }}</span>
+          <span class="text-sm">{{ $tr("Page") }} {{ meta.current_page }} {{ $tr("of") }} {{ meta.last_page }}</span>
+          <NuxtLink v-if="page < meta.last_page" :to="pageLocation(page + 1)" class="catalog-outline" prefetch-on="interaction" :aria-label="$tr('Next product page')">{{ $tr("Next") }}</NuxtLink>
+          <span v-else class="catalog-outline opacity-50" aria-disabled="true">{{ $tr("Next") }}</span>
         </nav>
       </section>
     </div>
@@ -248,14 +249,14 @@ const retryFacets = () => { void facetData.refresh(); if (categoryData.error.val
     >
       <div class="p-4 sm:p-6 min-w-0">
         <div class="flex items-center justify-between gap-2 mb-4">
-          <h2 id="mobile-filter-title" class="font-serif text-xl font-bold">Filters</h2>
-          <button data-dialog-initial-focus type="button" class="catalog-outline" aria-label="Close filters" @click="closeFilters">Close</button>
+          <h2 id="mobile-filter-title" class="font-serif text-xl font-bold">{{ $tr("Filters") }}</h2>
+          <button data-dialog-initial-focus type="button" class="catalog-outline" :aria-label="$tr('Close filters')" @click="closeFilters">{{ $tr("Close") }}</button>
         </div>
         <CatalogFilters :groups="groups" :selected="selected" :min-price="minPrice" :max-price="maxPrice"
           :facets-pending="facetData.pending.value" :facets-failed="Boolean(facetData.error.value)"
           @retry="retryFacets" @change="changeFilter" @price="changePrice" />
-        <div class="mt-5 flex flex-wrap gap-2"><button type="button" class="catalog-outline" @click="closeFilters">Show products</button>
-          <button v-if="filterCount" type="button" class="catalog-outline" @click="clearFilters">Clear filters</button></div>
+        <div class="mt-5 flex flex-wrap gap-2"><button type="button" class="catalog-outline" @click="closeFilters">{{ $tr("Show products") }}</button>
+          <button v-if="filterCount" type="button" class="catalog-outline" @click="clearFilters">{{ $tr("Clear filters") }}</button></div>
       </div>
     </dialog>
   </div>

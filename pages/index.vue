@@ -55,14 +55,14 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
       <!-- Center Hero Content -->
       <div class="relative z-10 max-w-4xl mx-auto text-center px-4 sm:px-6">
         <span class="mb-4 inline-block rounded bg-brand-charcoal/95 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-gold-light sm:text-[11px] sm:tracking-[0.3em]">
-          Autumn / Festive Atelier 2026
+          {{ $tr("Autumn / Festive Atelier 2026") }}
         </span>
         <h1 class="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-white mb-6 leading-tight drop-shadow-md">
-          Timeless Silhouettes, <br class="hidden sm:block">
-          <span class="italic font-normal font-serif">Tailored to You</span>
+          {{ $tr("Timeless Silhouettes,") }} <br class="hidden sm:block">
+          <span class="italic font-normal font-serif">{{ $tr("Tailored to You") }}</span>
         </h1>
         <p class="text-xs sm:text-sm text-gray-200 max-w-xl mx-auto mb-10 leading-relaxed font-light drop-shadow-sm">
-          Minimalist ready-to-wear clothing in refined lawns, linens, and pure silks, paired with bespoke tailoring to your exact body measurements.
+          {{ $tr("Minimalist ready-to-wear clothing in refined lawns, linens, and pure silks, paired with bespoke tailoring to your exact body measurements.") }}
         </p>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -70,13 +70,13 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
             to="/shop"
             class="w-full sm:w-auto px-9 py-4 bg-white text-brand-charcoal hover:bg-brand-gold hover:text-white text-xs uppercase tracking-luxury font-medium transition-all duration-300 shadow-md"
           >
-            Shop Ready-to-Wear
+            {{ $tr("Shop Ready-to-Wear") }}
           </NuxtLink>
           <NuxtLink
             to="/stitching"
             class="w-full sm:w-auto px-9 py-4 border border-white text-white hover:bg-white hover:text-brand-charcoal text-xs uppercase tracking-luxury font-medium transition-all duration-300 backdrop-blur-sm"
           >
-            Book Custom Stitching
+            {{ $tr("Book Custom Stitching") }}
           </NuxtLink>
         </div>
       </div>
@@ -86,10 +86,10 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
     <section class="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="text-center max-w-xl mx-auto mb-14">
         <span class="text-[10px] uppercase tracking-luxury text-brand-gold font-semibold block mb-1">
-          Curation
+          {{ $tr("Curation") }}
         </span>
         <h2 class="font-serif text-2xl sm:text-4xl font-bold text-brand-charcoal">
-          Shop by Aesthetic
+          {{ $tr("Shop by Aesthetic") }}
         </h2>
         <div class="w-12 h-0.5 bg-brand-gold-decoration mx-auto mt-4" />
       </div>
@@ -110,13 +110,13 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
           
           <div class="absolute bottom-0 inset-x-0 p-8 text-white text-center flex flex-col items-center">
             <h3 class="font-serif text-2xl font-bold tracking-luxury uppercase mb-3 drop-shadow-sm">
-              {{ cat.name }}
+              {{ $tr(cat.name) }}
             </h3>
             <NuxtLink
               :to="`/shop?category=${cat.slug}`"
               class="inline-block text-[11px] uppercase tracking-luxury border-b border-white/60 pb-1 hover:border-white hover:text-white transition-colors"
             >
-              Explore Collection →
+              {{ $tr("Explore Collection →") }}
             </NuxtLink>
           </div>
         </div>
@@ -129,17 +129,17 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
         <div class="flex flex-col sm:flex-row items-center justify-between mb-12">
           <div>
             <span class="text-[10px] uppercase tracking-luxury text-brand-gold font-semibold block mb-1">
-              Curated Pret
+              {{ $tr("Curated Pret") }}
             </span>
             <h2 class="font-serif text-2xl sm:text-3xl font-bold text-brand-charcoal">
-              Featured Edition
+              {{ $tr("Featured Edition") }}
             </h2>
           </div>
           <NuxtLink
             to="/shop"
             class="text-xs uppercase tracking-luxury text-brand-charcoal hover:text-brand-gold transition-colors border-b border-brand-charcoal hover:border-brand-gold pb-0.5 mt-4 sm:mt-0 font-medium"
           >
-            View All Collection →
+            {{ $tr("View All Collection →") }}
           </NuxtLink>
         </div>
 
@@ -156,7 +156,7 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
         </div>
 
         <div v-else class="text-center py-12 text-xs text-brand-muted">
-          No featured products found.
+          {{ $tr("No featured products found.") }}
         </div>
       </div>
     </section>
@@ -166,26 +166,26 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center bg-brand-cream border border-brand-border p-8 sm:p-14">
         <div>
           <span class="text-[10px] uppercase tracking-luxury text-brand-gold font-semibold block mb-2">
-            Signature Tailoring Service
+            {{ $tr("Signature Tailoring Service") }}
           </span>
           <h2 class="font-serif text-3xl sm:text-4xl font-bold text-brand-charcoal mb-6 leading-tight">
-            Online Custom Tailoring for Your Unstitched Fabric
+            {{ $tr("Online Custom Tailoring for Your Unstitched Fabric") }}
           </h2>
           <p class="text-xs sm:text-sm text-brand-muted leading-relaxed mb-6 font-light">
-            Have favorite unstitched fabric from any brand? Send it to our atelier. Our master tailors cut, style, and hand-finish each garment according to your personal measurement profile or sample suit.
+            {{ $tr("Have favorite unstitched fabric from any brand? Send it to our atelier. Our master tailors cut, style, and hand-finish each garment according to your personal measurement profile or sample suit.") }}
           </p>
           <ul class="space-y-3.5 text-xs text-brand-charcoal mb-8">
-            <li class="flex items-center space-x-2.5">
+            <li class="flex items-center space-x-2.5 rtl:space-x-reverse">
               <span class="w-1.5 h-1.5 bg-brand-gold-decoration rounded-full" />
-              <span>Send your fabric by courier after the atelier confirms the address</span>
+              <span>{{ $tr("Send your fabric by courier after the atelier confirms the address") }}</span>
             </li>
-            <li class="flex items-center space-x-2.5">
+            <li class="flex items-center space-x-2.5 rtl:space-x-reverse">
               <span class="w-1.5 h-1.5 bg-brand-gold-decoration rounded-full" />
-              <span>Enter shirt and trouser measurements online or send a fitted sample set</span>
+              <span>{{ $tr("Enter shirt and trouser measurements online or send a fitted sample set") }}</span>
             </li>
-            <li class="flex items-center space-x-2.5">
+            <li class="flex items-center space-x-2.5 rtl:space-x-reverse">
               <span class="w-1.5 h-1.5 bg-brand-gold-decoration rounded-full" />
-              <span>Fast 5–7 working days turnaround with doorstep delivery</span>
+              <span>{{ $tr("Fast 5–7 working days turnaround with doorstep delivery") }}</span>
             </li>
           </ul>
 
@@ -193,7 +193,7 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
             to="/stitching"
             class="inline-block px-9 py-4 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors duration-200"
           >
-            Book Custom Stitching
+            {{ $tr("Book Custom Stitching") }}
           </NuxtLink>
         </div>
 
@@ -218,8 +218,8 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
             </svg>
           </div>
-          <h3 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">Nationwide COD</h3>
-          <p class="text-xs text-brand-muted max-w-[200px]">Cash on delivery available across all cities and towns in Pakistan.</p>
+          <h3 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">{{ $tr("Nationwide COD") }}</h3>
+          <p class="text-xs text-brand-muted max-w-[200px]">{{ $tr("Cash on delivery available across all cities and towns in Pakistan.") }}</p>
         </div>
 
         <!-- Block 2: Custom Fitting -->
@@ -229,8 +229,8 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" />
             </svg>
           </div>
-          <h3 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">Custom Fitting</h3>
-          <p class="text-xs text-brand-muted max-w-[200px]">Tailored precisely to your body measurements or sample suit.</p>
+          <h3 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">{{ $tr("Custom Fitting") }}</h3>
+          <p class="text-xs text-brand-muted max-w-[200px]">{{ $tr("Tailored precisely to your body measurements or sample suit.") }}</p>
         </div>
 
         <!-- Block 3: Quality Check -->
@@ -240,8 +240,8 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </div>
-          <h3 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">Quality Check</h3>
-          <p class="text-xs text-brand-muted max-w-[200px]">Every stitch, seam, and hem inspected before luxury packaging.</p>
+          <h3 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">{{ $tr("Quality Check") }}</h3>
+          <p class="text-xs text-brand-muted max-w-[200px]">{{ $tr("Every stitch, seam, and hem inspected before luxury packaging.") }}</p>
         </div>
 
         <!-- Block 4: WhatsApp Support -->
@@ -251,8 +251,8 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </div>
-          <h3 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">Stylist Assistance</h3>
-          <p class="text-xs text-brand-muted max-w-[200px]">Live WhatsApp styling advice, measurement help & updates.</p>
+          <h3 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">{{ $tr("Stylist Assistance") }}</h3>
+          <p class="text-xs text-brand-muted max-w-[200px]">{{ $tr("Live WhatsApp styling advice, measurement help & updates.") }}</p>
         </div>
       </div>
     </section>

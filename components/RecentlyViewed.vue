@@ -47,10 +47,10 @@ const formatPrice = (amount: number) => {
       <div class="flex items-center justify-between mb-8">
         <div>
           <span class="text-[10px] uppercase tracking-widest text-brand-gold font-semibold block mb-1">
-            Your Browsing History
+            {{ $tr("Your Browsing History") }}
           </span>
           <h3 class="font-serif text-2xl text-brand-charcoal">
-            Recently Viewed
+            {{ $tr("Recently Viewed") }}
           </h3>
         </div>
       </div>
@@ -68,11 +68,11 @@ const formatPrice = (amount: number) => {
     <div v-else-if="layout === 'compact'" class="py-4 border-t border-brand-border">
       <div class="flex items-center justify-between mb-3 px-1">
         <span class="text-[11px] uppercase tracking-wider font-semibold text-brand-charcoal">
-          Recently Viewed
+          {{ $tr("Recently Viewed") }}
         </span>
       </div>
 
-      <div class="flex space-x-3 overflow-x-auto pb-2 scrollbar-thin">
+      <div class="flex space-x-3 rtl:space-x-reverse overflow-x-auto pb-2 scrollbar-thin">
         <NuxtLink
           v-for="item in displayItems"
           :key="item.id"

@@ -102,23 +102,23 @@ const toggleFaq = (id: string) => {
   <div class="bg-brand-white min-h-screen">
     <!-- Breadcrumb -->
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-      <nav class="flex items-center space-x-2 text-[10px] uppercase tracking-luxury text-brand-muted">
-        <NuxtLink to="/" class="hover:text-brand-charcoal transition-colors">Home</NuxtLink>
+      <nav class="flex items-center space-x-2 rtl:space-x-reverse text-[10px] uppercase tracking-luxury text-brand-muted">
+        <NuxtLink to="/" class="hover:text-brand-charcoal transition-colors">{{ $tr("Home") }}</NuxtLink>
         <span>/</span>
-        <span class="text-brand-charcoal font-semibold">FAQs & Support</span>
+        <span class="text-brand-charcoal font-semibold">{{ $tr("FAQs & Support") }}</span>
       </nav>
     </div>
 
     <!-- Header Section -->
     <section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 text-center">
       <span class="text-[10px] uppercase tracking-[0.25em] text-brand-gold font-semibold block mb-2">
-        Concierge & Help Desk
+        {{ $tr("Concierge & Help Desk") }}
       </span>
       <h1 class="font-serif text-3xl sm:text-5xl text-brand-charcoal font-normal">
-        Frequently Asked Questions
+        {{ $tr("Frequently Asked Questions") }}
       </h1>
       <p class="text-xs sm:text-sm text-brand-muted mt-4 max-w-xl mx-auto font-light leading-relaxed">
-        Have questions about custom fitting, COD delivery timelines, or sending a fitting sample? Find instant answers below.
+        {{ $tr("Have questions about custom fitting, COD delivery timelines, or sending a fitting sample? Find instant answers below.") }}
       </p>
 
       <!-- Category Filter Tabs -->
@@ -129,7 +129,7 @@ const toggleFaq = (id: string) => {
           :class="[activeCategory === 'all' ? 'bg-brand-charcoal text-white border-brand-charcoal font-semibold' : 'bg-brand-cream border-brand-border text-brand-charcoal hover:border-brand-charcoal']"
           @click="activeCategory = 'all'"
         >
-          All Topics
+          {{ $tr("All Topics") }}
         </button>
         <button
           type="button"
@@ -137,7 +137,7 @@ const toggleFaq = (id: string) => {
           :class="[activeCategory === 'stitching' ? 'bg-brand-charcoal text-white border-brand-charcoal font-semibold' : 'bg-brand-cream border-brand-border text-brand-charcoal hover:border-brand-charcoal']"
           @click="activeCategory = 'stitching'"
         >
-          Custom Stitching
+          {{ $tr("Custom Stitching") }}
         </button>
         <button
           type="button"
@@ -145,7 +145,7 @@ const toggleFaq = (id: string) => {
           :class="[activeCategory === 'orders' ? 'bg-brand-charcoal text-white border-brand-charcoal font-semibold' : 'bg-brand-cream border-brand-border text-brand-charcoal hover:border-brand-charcoal']"
           @click="activeCategory = 'orders'"
         >
-          Shipping & Orders
+          {{ $tr("Shipping & Orders") }}
         </button>
         <button
           type="button"
@@ -153,7 +153,7 @@ const toggleFaq = (id: string) => {
           :class="[activeCategory === 'payment' ? 'bg-brand-charcoal text-white border-brand-charcoal font-semibold' : 'bg-brand-cream border-brand-border text-brand-charcoal hover:border-brand-charcoal']"
           @click="activeCategory = 'payment'"
         >
-          Payments & COD
+          {{ $tr("Payments & COD") }}
         </button>
         <button
           type="button"
@@ -161,7 +161,7 @@ const toggleFaq = (id: string) => {
           :class="[activeCategory === 'exchanges' ? 'bg-brand-charcoal text-white border-brand-charcoal font-semibold' : 'bg-brand-cream border-brand-border text-brand-charcoal hover:border-brand-charcoal']"
           @click="activeCategory = 'exchanges'"
         >
-          Exchanges & Care
+          {{ $tr("Exchanges & Care") }}
         </button>
       </div>
     </section>
@@ -176,11 +176,11 @@ const toggleFaq = (id: string) => {
         >
           <button
             type="button"
-            class="w-full flex items-center justify-between text-left focus:outline-none group"
+            class="w-full flex items-center justify-between text-start focus:outline-none group"
             @click="toggleFaq(item.id)"
           >
-            <span class="font-serif text-base sm:text-lg text-brand-charcoal font-medium group-hover:text-brand-gold transition-colors pr-4">
-              {{ item.question }}
+            <span class="font-serif text-base sm:text-lg text-brand-charcoal font-medium group-hover:text-brand-gold transition-colors pe-4">
+              {{ $tr(item.question) }}
             </span>
             <span class="text-brand-charcoal font-serif text-xl shrink-0 leading-none">
               {{ openItem === item.id ? '−' : '+' }}
@@ -196,7 +196,7 @@ const toggleFaq = (id: string) => {
             leave-to-class="opacity-0 -translate-y-1 max-h-0"
           >
             <div v-show="openItem === item.id" class="pt-3 text-xs sm:text-sm text-brand-muted leading-relaxed font-light">
-              <p>{{ item.answer }}</p>
+              <p>{{ $tr(item.answer) }}</p>
             </div>
           </Transition>
         </div>
@@ -206,15 +206,15 @@ const toggleFaq = (id: string) => {
     <!-- WhatsApp / Contact Callout Card -->
     <section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
       <div class="bg-brand-cream/50 border border-brand-border p-8 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div class="space-y-2 text-center md:text-left">
+        <div class="space-y-2 text-center md:text-start">
           <span class="text-[10px] uppercase tracking-luxury text-brand-gold font-semibold block">
-            Still Have Questions?
+            {{ $tr("Still Have Questions?") }}
           </span>
           <h3 class="font-serif text-xl sm:text-2xl text-brand-charcoal">
-            Speak Directly with our Atelier Stylist
+            {{ $tr("Speak Directly with our Atelier Stylist") }}
           </h3>
           <p class="text-xs text-brand-muted max-w-md font-light leading-relaxed">
-            Need guidance on measuring, neck styling, or fabric matching? Use a support option below when available.
+            {{ $tr("Need guidance on measuring, neck styling, or fabric matching? Use a support option below when available.") }}
           </p>
         </div>
 
@@ -224,19 +224,19 @@ const toggleFaq = (id: string) => {
             :href="chatUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="px-6 py-3.5 bg-[#25D366] text-white text-xs uppercase tracking-luxury font-medium hover:opacity-90 transition-opacity flex items-center space-x-2"
+            class="px-6 py-3.5 bg-[#25D366] text-white text-xs uppercase tracking-luxury font-medium hover:opacity-90 transition-opacity flex items-center space-x-2 rtl:space-x-reverse"
           >
             <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
               <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.592 2.654-.696c1.002.547 1.799.821 2.806.821h.005c3.18 0 5.767-2.586 5.768-5.766.001-3.182-2.585-5.77-5.773-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.69.058-1.12-.08-.415-.133-.94-.317-1.616-.615-1.396-.616-2.298-2.025-2.368-2.118-.07-.093-.568-.756-.568-1.442s.36-1.025.488-1.164c.129-.139.281-.174.375-.174s.188.005.27.009c.087.004.204-.033.319.245.12.289.41 1.002.446 1.075.036.073.06.158.01.255-.05.097-.075.158-.15.244-.075.086-.157.192-.224.258-.075.074-.153.155-.066.305.087.15.387.638.83 1.032.571.508 1.052.665 1.202.739.15.074.238.065.326-.036.088-.101.376-.438.476-.588.1-.15.2-.125.337-.074.137.051.874.412 1.024.487.15.075.25.112.287.175.037.063.037.367-.107.772zM12 2C6.477 2 2 6.477 2 12c0 1.891.526 3.66 1.439 5.174L2 22l4.981-1.306C8.423 21.547 10.15 22 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
             </svg>
-            <span>WhatsApp Concierge</span>
+            <span>{{ $tr("WhatsApp Concierge") }}</span>
           </a>
           <a
             v-if="emailHref"
             :href="emailHref"
             class="px-6 py-3.5 bg-white border border-brand-border text-brand-charcoal text-xs uppercase tracking-luxury font-medium hover:border-brand-charcoal transition-colors"
           >
-            Email Support
+            {{ $tr("Email Support") }}
           </a>
         </div>
       </div>

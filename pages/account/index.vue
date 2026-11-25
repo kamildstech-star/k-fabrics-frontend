@@ -357,14 +357,14 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div v-if="!auth.isAuthenticated" class="min-h-screen py-10 text-center text-sm" role="status">Checking your session…</div>
+  <div v-if="!auth.isAuthenticated" class="min-h-screen py-10 text-center text-sm" role="status">{{ $tr("Checking your session…") }}</div>
   <div v-else class="bg-brand-white min-h-screen py-10 sm:py-16">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Breadcrumbs -->
-      <nav class="flex items-center space-x-2 text-[10px] uppercase tracking-luxury text-brand-muted mb-8">
-        <NuxtLink to="/" class="hover:text-brand-charcoal transition-colors">Home</NuxtLink>
+      <nav class="flex items-center space-x-2 rtl:space-x-reverse text-[10px] uppercase tracking-luxury text-brand-muted mb-8">
+        <NuxtLink to="/" class="hover:text-brand-charcoal transition-colors">{{ $tr("Home") }}</NuxtLink>
         <span>/</span>
-        <span class="text-brand-charcoal font-semibold">My Account</span>
+        <span class="text-brand-charcoal font-semibold">{{ $tr("My Account") }}</span>
       </nav>
 
       <!-- Reorder Success Notice -->
@@ -381,11 +381,11 @@ const handleLogout = async () => {
           class="mb-6 p-4 bg-brand-cream border border-brand-gold text-brand-charcoal text-xs flex items-center justify-between"
         >
           <div role="status">
-            <p>{{ reorderMessage }}</p>
+            <p>{{ $tr(reorderMessage) }}</p>
             <ul v-if="customReorderLinks.length" class="mt-2 space-y-1">
               <li v-for="product in customReorderLinks" :key="product.slug">
                 <NuxtLink :to="`/products/${encodeURIComponent(product.slug)}`" class="underline">
-                  Start a new fitting for {{ product.name }}
+                  {{ $tr("Start a new fitting for") }} {{ product.name }}
                 </NuxtLink>
               </li>
             </ul>
@@ -394,7 +394,7 @@ const handleLogout = async () => {
             class="text-[10px] uppercase tracking-luxury font-semibold underline"
             @click="cart.openCart()"
           >
-            View Bag
+            {{ $tr("View Bag") }}
           </button>
         </div>
       </Transition>
@@ -403,10 +403,10 @@ const handleLogout = async () => {
       <div class="bg-brand-cream/60 border border-brand-border p-6 sm:p-8 mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span class="text-[10px] uppercase tracking-[0.25em] text-brand-gold font-semibold block mb-1">
-            Client Atelier Profile
+            {{ $tr("Client Atelier Profile") }}
           </span>
           <h1 class="font-serif text-2xl sm:text-3xl font-bold text-brand-charcoal">
-            Welcome, {{ auth.userName || 'Valued Client' }}
+            {{ $tr("Welcome,") }} {{ auth.userName || 'Valued Client' }}
           </h1>
           <p class="text-xs text-brand-muted mt-0.5">
             {{ auth.userEmail }}
@@ -417,10 +417,10 @@ const handleLogout = async () => {
           class="px-5 py-2.5 border border-brand-border text-xs uppercase tracking-luxury text-brand-charcoal hover:bg-brand-charcoal hover:text-white transition-colors self-start sm:self-auto"
           @click="handleLogout"
         >
-          Sign Out
+          {{ $tr("Sign Out") }}
         </button>
       </div>
-      <p v-if="logoutError" role="alert" class="my-3 text-sm text-red-700">{{ logoutError }}</p>
+      <p v-if="logoutError" role="alert" class="my-3 text-sm text-red-700">{{ $tr(logoutError) }}</p>
 
 
       <!-- Dashboard Grid: Sidebar Navigation + Tab Content -->
@@ -428,7 +428,7 @@ const handleLogout = async () => {
         <!-- Sidebar Navigation (3 Cols) -->
         <aside class="lg:col-span-3 space-y-2">
           <button
-            class="w-full text-left px-4 py-3 text-xs uppercase tracking-luxury font-semibold transition-colors flex items-center justify-between border"
+            class="w-full text-start px-4 py-3 text-xs uppercase tracking-luxury font-semibold transition-colors flex items-center justify-between border"
             :class="[
               activeTab === 'orders'
                 ? 'bg-brand-charcoal text-white border-brand-charcoal'
@@ -436,12 +436,12 @@ const handleLogout = async () => {
             ]"
             @click="activeTab = 'orders'"
           >
-            <span>My Orders</span>
+            <span>{{ $tr("My Orders") }}</span>
             <span v-if="orders.length > 0" class="text-[10px] font-bold">({{ orders.length }})</span>
           </button>
 
           <button
-            class="w-full text-left px-4 py-3 text-xs uppercase tracking-luxury font-semibold transition-colors flex items-center justify-between border"
+            class="w-full text-start px-4 py-3 text-xs uppercase tracking-luxury font-semibold transition-colors flex items-center justify-between border"
             :class="[
               activeTab === 'measurements'
                 ? 'bg-brand-charcoal text-white border-brand-charcoal'
@@ -449,12 +449,12 @@ const handleLogout = async () => {
             ]"
             @click="activeTab = 'measurements'"
           >
-            <span>Saved Measurements</span>
+            <span>{{ $tr("Saved Measurements") }}</span>
             <span v-if="measurements.length > 0" class="text-[10px] font-bold">({{ measurements.length }})</span>
           </button>
 
           <button
-            class="w-full text-left px-4 py-3 text-xs uppercase tracking-luxury font-semibold transition-colors flex items-center justify-between border"
+            class="w-full text-start px-4 py-3 text-xs uppercase tracking-luxury font-semibold transition-colors flex items-center justify-between border"
             :class="[
               activeTab === 'addresses'
                 ? 'bg-brand-charcoal text-white border-brand-charcoal'
@@ -462,12 +462,12 @@ const handleLogout = async () => {
             ]"
             @click="activeTab = 'addresses'"
           >
-            <span>Saved Addresses</span>
+            <span>{{ $tr("Saved Addresses") }}</span>
             <span v-if="addresses.length > 0" class="text-[10px] font-bold">({{ addresses.length }})</span>
           </button>
 
           <button
-            class="w-full text-left px-4 py-3 text-xs uppercase tracking-luxury font-semibold transition-colors flex items-center justify-between border"
+            class="w-full text-start px-4 py-3 text-xs uppercase tracking-luxury font-semibold transition-colors flex items-center justify-between border"
             :class="[
               activeTab === 'profile'
                 ? 'bg-brand-charcoal text-white border-brand-charcoal'
@@ -475,20 +475,20 @@ const handleLogout = async () => {
             ]"
             @click="activeTab = 'profile'"
           >
-            <span>Profile Details</span>
+            <span>{{ $tr("Profile Details") }}</span>
           </button>
         </aside>
 
         <!-- Main Content Area (9 Cols) -->
-        <section aria-label="Account details" class="min-w-0 lg:col-span-9">
+        <section :aria-label="$tr('Account details')" class="min-w-0 lg:col-span-9">
           <!-- ================= TAB 1: MY ORDERS ================= -->
           <div v-if="activeTab === 'orders'" class="space-y-6">
             <div class="flex items-center justify-between border-b border-brand-border pb-4">
               <h2 class="font-serif text-xl font-bold uppercase tracking-luxury text-brand-charcoal">
-                Order History & Reorder
+                {{ $tr("Order History & Reorder") }}
               </h2>
               <span class="text-xs text-brand-muted">
-                {{ orders.length }} {{ orders.length === 1 ? 'order' : 'orders' }} placed
+                {{ orders.length }} {{ orders.length === 1 ? $tr("order") : $tr("orders") }} {{ $tr("placed") }}
               </span>
             </div>
 
@@ -506,13 +506,13 @@ const handleLogout = async () => {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
               </div>
-              <h3 class="font-serif text-lg font-bold text-brand-charcoal mb-1">No Orders Yet</h3>
-              <p class="text-xs text-brand-muted mb-6">Discover our ready-to-wear collections or book custom bespoke tailoring.</p>
+              <h3 class="font-serif text-lg font-bold text-brand-charcoal mb-1">{{ $tr("No Orders Yet") }}</h3>
+              <p class="text-xs text-brand-muted mb-6">{{ $tr("Discover our ready-to-wear collections or book custom bespoke tailoring.") }}</p>
               <NuxtLink
                 to="/shop"
                 class="inline-block px-6 py-2.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors"
               >
-                Shop Now
+                {{ $tr("Shop Now") }}
               </NuxtLink>
             </div>
 
@@ -526,7 +526,7 @@ const handleLogout = async () => {
                 <!-- Card Header -->
                 <div class="bg-brand-cream/50 p-4 sm:p-5 border-b border-brand-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-3 rtl:space-x-reverse">
                       <span class="font-serif text-lg font-bold text-brand-charcoal">
                         {{ order.order_number }}
                       </span>
@@ -538,30 +538,30 @@ const handleLogout = async () => {
                             : 'bg-brand-gold/10 text-brand-gold border-brand-gold/30'
                         ]"
                       >
-                        {{ order.order_status.replace(/_/g, ' ') }}
+                        {{ $tr(order.order_status.replace(/_/g, ' ')) }}
                       </span>
                     </div>
                     <p class="text-[11px] text-brand-muted mt-0.5">
-                      Placed on {{ formatDate(order.created_at) }} · Total: <strong class="text-brand-charcoal font-semibold">{{ formatPrice(order.total_amount) }}</strong>
+                      {{ $tr("Placed on") }} {{ formatDate(order.created_at) }} {{ $tr("· Total:") }} <strong class="text-brand-charcoal font-semibold">{{ formatPrice(order.total_amount) }}</strong>
                     </p>
                     <p v-if="order.tracking_number" class="text-xs text-brand-charcoal mt-1">
-                      <span v-if="order.courier_name">{{ order.courier_name }} · </span>Tracking: {{ order.tracking_number }}
+                      <span v-if="order.courier_name">{{ order.courier_name }} · </span>{{ $tr("Tracking:") }} {{ order.tracking_number }}
                     </p>
                   </div>
 
-                  <div class="flex items-center space-x-3">
+                  <div class="flex items-center space-x-3 rtl:space-x-reverse">
                     <NuxtLink
                       v-if="order.order_status === 'delivered'"
                       to="/policies/returns#request"
                       class="px-3 py-2 border border-brand-border text-sm"
-                    >Return or exchange</NuxtLink>
+                    >{{ $tr("Return or exchange") }}</NuxtLink>
                     <button
                       class="px-4 py-2 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors shadow-sm"
-                      title="Add available ready-to-wear items at current prices"
+                      :title="$tr('Add available ready-to-wear items at current prices')"
                       :disabled="reordering"
                       @click="handleReorder(order)"
                     >
-                      Reorder
+                      {{ $tr("Reorder") }}
                     </button>
                   </div>
                 </div>
@@ -577,10 +577,10 @@ const handleLogout = async () => {
                       <h4 class="font-serif font-bold text-brand-charcoal">
                         {{ item.product_name }}
                       </h4>
-                      <p class="text-[11px] text-brand-muted mt-0.5 space-x-2">
-                        <span v-if="item.size">Size: {{ item.size }}</span>
-                        <span v-if="item.color">Color: {{ item.color }}</span>
-                        <span>Qty: {{ item.quantity }}</span>
+                      <p class="text-[11px] text-brand-muted mt-0.5 space-x-2 rtl:space-x-reverse">
+                        <span v-if="item.size">{{ $tr("Size:") }} {{ item.size }}</span>
+                        <span v-if="item.color">{{ $tr("Color:") }} {{ item.color }}</span>
+                        <span>{{ $tr("Qty:") }} {{ item.quantity }}</span>
                       </p>
                     </div>
                     <span class="font-bold text-brand-charcoal">
@@ -597,16 +597,16 @@ const handleLogout = async () => {
             <div class="flex items-center justify-between border-b border-brand-border pb-4">
               <div>
                 <h2 class="font-serif text-xl font-bold uppercase tracking-luxury text-brand-charcoal">
-                  Measurement Profiles
+                  {{ $tr("Measurement Profiles") }}
                 </h2>
-                <p class="text-xs text-brand-muted">Reusable custom tailoring profiles for instant fitting</p>
+                <p class="text-xs text-brand-muted">{{ $tr("Reusable custom tailoring profiles for instant fitting") }}</p>
               </div>
 
               <button
                 class="px-5 py-2.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors shadow-sm"
                 @click="openNewMeasurementModal"
               >
-                + Add Profile
+                {{ $tr("+ Add Profile") }}
               </button>
             </div>
 
@@ -619,13 +619,13 @@ const handleLogout = async () => {
               v-else-if="measurements.length === 0"
               class="text-center py-16 border border-brand-border bg-brand-cream/20 p-8"
             >
-              <h3 class="font-serif text-lg font-bold text-brand-charcoal mb-1">No Saved Measurements</h3>
-              <p class="text-xs text-brand-muted mb-6">Create a measurement profile once and reuse it across all custom stitching orders.</p>
+              <h3 class="font-serif text-lg font-bold text-brand-charcoal mb-1">{{ $tr("No Saved Measurements") }}</h3>
+              <p class="text-xs text-brand-muted mb-6">{{ $tr("Create a measurement profile once and reuse it across all custom stitching orders.") }}</p>
               <button
                 class="px-6 py-2.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors"
                 @click="openNewMeasurementModal"
               >
-                + Create Measurement Profile
+                {{ $tr("+ Create Measurement Profile") }}
               </button>
             </div>
 
@@ -643,36 +643,36 @@ const handleLogout = async () => {
                         {{ m.profile_name }}
                       </h3>
                       <span class="text-[10px] uppercase tracking-wider text-brand-gold font-semibold">
-                        Unit: {{ m.unit || 'inches' }}
+                        {{ $tr("Unit:") }} {{ m.unit || 'inches' }}
                       </span>
                     </div>
 
-                    <div class="flex items-center space-x-2">
+                    <div class="flex items-center space-x-2 rtl:space-x-reverse">
                       <button
                         class="text-xs text-brand-muted hover:text-brand-charcoal underline"
                         @click="editMeasurement(m)"
                       >
-                        Edit
+                        {{ $tr("Edit") }}
                       </button>
                       <button
                         class="text-xs text-red-600 hover:underline"
                         @click="deleteMeasurement(m.id)"
                       >
-                        Delete
+                        {{ $tr("Delete") }}
                       </button>
                     </div>
                   </div>
 
                   <!-- Grid of specs -->
                   <div class="grid grid-cols-3 gap-2.5 text-[11px] mb-4">
-                    <div v-if="m.shirt_length"><span class="text-brand-muted">Length:</span> {{ m.shirt_length }}</div>
-                    <div v-if="m.shoulder"><span class="text-brand-muted">Shoulder:</span> {{ m.shoulder }}</div>
-                    <div v-if="m.chest"><span class="text-brand-muted">Chest:</span> {{ m.chest }}</div>
-                    <div v-if="m.waist"><span class="text-brand-muted">Waist:</span> {{ m.waist }}</div>
-                    <div v-if="m.hips"><span class="text-brand-muted">Hips:</span> {{ m.hips }}</div>
-                    <div v-if="m.sleeve_length"><span class="text-brand-muted">Sleeve:</span> {{ m.sleeve_length }}</div>
-                    <div v-if="m.trouser_length"><span class="text-brand-muted">Trouser:</span> {{ m.trouser_length }}</div>
-                    <div v-if="m.pancha"><span class="text-brand-muted">Pancha:</span> {{ m.pancha }}</div>
+                    <div v-if="m.shirt_length"><span class="text-brand-muted">{{ $tr("Length:") }}</span> {{ m.shirt_length }}</div>
+                    <div v-if="m.shoulder"><span class="text-brand-muted">{{ $tr("Shoulder:") }}</span> {{ m.shoulder }}</div>
+                    <div v-if="m.chest"><span class="text-brand-muted">{{ $tr("Chest:") }}</span> {{ m.chest }}</div>
+                    <div v-if="m.waist"><span class="text-brand-muted">{{ $tr("Waist:") }}</span> {{ m.waist }}</div>
+                    <div v-if="m.hips"><span class="text-brand-muted">{{ $tr("Hips:") }}</span> {{ m.hips }}</div>
+                    <div v-if="m.sleeve_length"><span class="text-brand-muted">{{ $tr("Sleeve:") }}</span> {{ m.sleeve_length }}</div>
+                    <div v-if="m.trouser_length"><span class="text-brand-muted">{{ $tr("Trouser:") }}</span> {{ m.trouser_length }}</div>
+                    <div v-if="m.pancha"><span class="text-brand-muted">{{ $tr("Pancha:") }}</span> {{ m.pancha }}</div>
                   </div>
 
                   <p v-if="m.extra_notes" class="text-[11px] text-brand-muted italic bg-brand-cream/60 p-2 border border-brand-border/40">
@@ -688,16 +688,16 @@ const handleLogout = async () => {
             <div class="flex items-center justify-between border-b border-brand-border pb-4">
               <div>
                 <h2 class="font-serif text-xl font-bold uppercase tracking-luxury text-brand-charcoal">
-                  Delivery Addresses
+                  {{ $tr("Delivery Addresses") }}
                 </h2>
-                <p class="text-xs text-brand-muted">Save your delivery locations for swift one-step checkout</p>
+                <p class="text-xs text-brand-muted">{{ $tr("Save your delivery locations for swift one-step checkout") }}</p>
               </div>
 
               <button
                 class="px-5 py-2.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors shadow-sm"
                 @click="openNewAddressModal"
               >
-                + Add Address
+                {{ $tr("+ Add Address") }}
               </button>
             </div>
 
@@ -710,13 +710,13 @@ const handleLogout = async () => {
               v-else-if="addresses.length === 0"
               class="text-center py-16 border border-brand-border bg-brand-cream/20 p-8"
             >
-              <h3 class="font-serif text-lg font-bold text-brand-charcoal mb-1">No Saved Addresses</h3>
-              <p class="text-xs text-brand-muted mb-6">Add a home or office address to speed up your future orders.</p>
+              <h3 class="font-serif text-lg font-bold text-brand-charcoal mb-1">{{ $tr("No Saved Addresses") }}</h3>
+              <p class="text-xs text-brand-muted mb-6">{{ $tr("Add a home or office address to speed up your future orders.") }}</p>
               <button
                 class="px-6 py-2.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors"
                 @click="openNewAddressModal"
               >
-                + Add New Address
+                {{ $tr("+ Add New Address") }}
               </button>
             </div>
 
@@ -737,13 +737,13 @@ const handleLogout = async () => {
                       v-if="addr.is_default"
                       class="text-[9px] uppercase tracking-wider font-semibold bg-brand-gold text-white px-2 py-0.5"
                     >
-                      Default
+                      {{ $tr("Default") }}
                     </span>
                   </div>
 
                   <p class="text-xs font-semibold text-brand-charcoal mb-1">{{ addr.recipient_name }}</p>
                   <p class="text-xs text-brand-muted leading-relaxed mb-2">{{ addr.address }}, {{ addr.city }}</p>
-                  <p class="text-xs text-brand-muted font-mono">Phone: {{ addr.phone }}</p>
+                  <p class="text-xs text-brand-muted font-mono">{{ $tr("Phone:") }} {{ addr.phone }}</p>
                 </div>
 
                 <div class="pt-4 mt-4 border-t border-brand-border/60 flex items-center justify-between text-xs">
@@ -752,13 +752,13 @@ const handleLogout = async () => {
                     class="text-[11px] text-brand-gold hover:underline font-medium"
                     @click="setAsDefaultAddress(addr)"
                   >
-                    Set as Default
+                    {{ $tr("Set as Default") }}
                   </button>
-                  <div v-else class="text-[11px] text-brand-muted">Primary Address</div>
+                  <div v-else class="text-[11px] text-brand-muted">{{ $tr("Primary Address") }}</div>
 
-                  <div class="flex items-center space-x-3">
-                    <button class="hover:underline text-brand-charcoal" @click="editAddress(addr)">Edit</button>
-                    <button class="text-red-600 hover:underline" @click="deleteAddress(addr.id)">Delete</button>
+                  <div class="flex items-center space-x-3 rtl:space-x-reverse">
+                    <button class="hover:underline text-brand-charcoal" @click="editAddress(addr)">{{ $tr("Edit") }}</button>
+                    <button class="text-red-600 hover:underline" @click="deleteAddress(addr.id)">{{ $tr("Delete") }}</button>
                   </div>
                 </div>
               </div>
@@ -769,31 +769,31 @@ const handleLogout = async () => {
           <div v-else-if="activeTab === 'profile'" class="space-y-6">
             <div class="border-b border-brand-border pb-4">
               <h2 class="font-serif text-xl font-bold uppercase tracking-luxury text-brand-charcoal">
-                Account Information
+                {{ $tr("Account Information") }}
               </h2>
-              <p class="text-xs text-brand-muted">Your registered details at K. Fabrics Atelier</p>
+              <p class="text-xs text-brand-muted">{{ $tr("Your registered details at K. Fabrics Atelier") }}</p>
             </div>
 
             <div class="border border-brand-border bg-white p-6 sm:p-8 space-y-4 max-w-xl text-xs">
               <div class="grid grid-cols-2 gap-4 pb-4 border-b border-brand-border/60">
                 <div>
-                  <span class="text-brand-muted uppercase text-[10px] block">Full Name</span>
+                  <span class="text-brand-muted uppercase text-[10px] block">{{ $tr("Full Name") }}</span>
                   <span class="font-bold text-brand-charcoal text-sm">{{ auth.userName }}</span>
                 </div>
                 <div>
-                  <span class="text-brand-muted uppercase text-[10px] block">Email Address</span>
+                  <span class="text-brand-muted uppercase text-[10px] block">{{ $tr("Email Address") }}</span>
                   <span class="font-medium text-brand-charcoal">{{ auth.userEmail }}</span>
                 </div>
               </div>
 
               <div class="grid grid-cols-2 gap-4 pb-4 border-b border-brand-border/60">
                 <div>
-                  <span class="text-brand-muted uppercase text-[10px] block">Phone Number</span>
+                  <span class="text-brand-muted uppercase text-[10px] block">{{ $tr("Phone Number") }}</span>
                   <span class="font-medium text-brand-charcoal">{{ auth.user?.phone || 'Not provided' }}</span>
                 </div>
                 <div>
-                  <span class="text-brand-muted uppercase text-[10px] block">Account Status</span>
-                  <span class="text-brand-gold font-semibold uppercase">Verified Client</span>
+                  <span class="text-brand-muted uppercase text-[10px] block">{{ $tr("Account Status") }}</span>
+                  <span class="text-brand-gold font-semibold uppercase">{{ $tr("Verified Client") }}</span>
                 </div>
               </div>
 
@@ -802,7 +802,7 @@ const handleLogout = async () => {
                   class="px-6 py-3 border border-brand-charcoal text-brand-charcoal hover:bg-brand-charcoal hover:text-white text-xs uppercase tracking-luxury font-medium transition-colors"
                   @click="handleLogout"
                 >
-                  Sign Out
+                  {{ $tr("Sign Out") }}
                 </button>
               </div>
             </div>
@@ -830,8 +830,8 @@ const handleLogout = async () => {
           @click.stop
         >
           <button
-            class="absolute top-4 right-4 text-brand-charcoal hover:text-brand-gold p-1"
-            aria-label="Close modal"
+            class="absolute top-4 end-4 text-brand-charcoal hover:text-brand-gold p-1"
+            :aria-label="$tr('Close modal')"
             @click="measurementModalOpen = false"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -840,29 +840,29 @@ const handleLogout = async () => {
           </button>
 
           <h2 class="font-serif text-xl sm:text-2xl font-bold text-brand-charcoal mb-1">
-            {{ editingMeasurementId ? 'Edit Measurement Profile' : 'New Measurement Profile' }}
+            {{ editingMeasurementId ? $tr("Edit Measurement Profile") : $tr("New Measurement Profile") }}
           </h2>
-          <p class="text-xs text-brand-muted mb-6">Enter specifications in {{ measurementForm.unit }}</p>
+          <p class="text-xs text-brand-muted mb-6">{{ $tr("Enter specifications in") }} {{ measurementForm.unit }}</p>
 
           <div v-if="measurementFormError" class="p-3 bg-red-50 text-red-700 text-xs mb-4">
-            {{ measurementFormError }}
+            {{ $tr(measurementFormError) }}
           </div>
 
           <form class="space-y-4" @submit.prevent="saveMeasurement">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="text-[10px] uppercase text-brand-charcoal font-semibold block mb-1">Profile Name *</label>
+                <label class="text-[10px] uppercase text-brand-charcoal font-semibold block mb-1">{{ $tr("Profile Name *") }}</label>
                 <input
                   v-model="measurementForm.profile_name"
                   type="text"
                   required
-                  placeholder="e.g. Standard Lawn Fit"
+                  :placeholder="$tr('e.g. Standard Lawn Fit')"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
               </div>
 
               <div>
-                <label class="text-[10px] uppercase text-brand-charcoal font-semibold block mb-1">Scale Unit</label>
+                <label class="text-[10px] uppercase text-brand-charcoal font-semibold block mb-1">{{ $tr("Scale Unit") }}</label>
                 <div class="flex border border-brand-border bg-white text-xs h-[38px]">
                   <button
                     type="button"
@@ -870,7 +870,7 @@ const handleLogout = async () => {
                     :class="[measurementForm.unit === 'inches' ? 'bg-brand-charcoal text-white' : 'text-brand-charcoal']"
                     @click="measurementForm.unit = 'inches'"
                   >
-                    Inches
+                    {{ $tr("Inches") }}
                   </button>
                   <button
                     type="button"
@@ -878,7 +878,7 @@ const handleLogout = async () => {
                     :class="[measurementForm.unit === 'cm' ? 'bg-brand-charcoal text-white' : 'text-brand-charcoal']"
                     @click="measurementForm.unit = 'cm'"
                   >
-                    CM
+                    {{ $tr("CM") }}
                   </button>
                 </div>
               </div>
@@ -886,73 +886,73 @@ const handleLogout = async () => {
 
             <!-- Shirt fields -->
             <div class="pt-2">
-              <span class="text-[10px] uppercase tracking-luxury text-brand-gold font-bold block mb-2">Shirt / Kameez</span>
+              <span class="text-[10px] uppercase tracking-luxury text-brand-gold font-bold block mb-2">{{ $tr("Shirt / Kameez") }}</span>
               <div class="grid grid-cols-3 gap-3">
                 <div>
-                  <label class="text-[10px] text-brand-muted block">Length</label>
-                  <input v-model.number="measurementForm.shirt_length" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
+                  <label class="text-[10px] text-brand-muted block">{{ $tr("Length") }}</label>
+                  <input dir="ltr" v-model.number="measurementForm.shirt_length" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
                 </div>
                 <div>
-                  <label class="text-[10px] text-brand-muted block">Shoulder</label>
-                  <input v-model.number="measurementForm.shoulder" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
+                  <label class="text-[10px] text-brand-muted block">{{ $tr("Shoulder") }}</label>
+                  <input dir="ltr" v-model.number="measurementForm.shoulder" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
                 </div>
                 <div>
-                  <label class="text-[10px] text-brand-muted block">Chest / Bust</label>
-                  <input v-model.number="measurementForm.chest" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
+                  <label class="text-[10px] text-brand-muted block">{{ $tr("Chest / Bust") }}</label>
+                  <input dir="ltr" v-model.number="measurementForm.chest" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
                 </div>
                 <div>
-                  <label class="text-[10px] text-brand-muted block">Waist</label>
-                  <input v-model.number="measurementForm.waist" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
+                  <label class="text-[10px] text-brand-muted block">{{ $tr("Waist") }}</label>
+                  <input dir="ltr" v-model.number="measurementForm.waist" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
                 </div>
                 <div>
-                  <label class="text-[10px] text-brand-muted block">Hips</label>
-                  <input v-model.number="measurementForm.hips" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
+                  <label class="text-[10px] text-brand-muted block">{{ $tr("Hips") }}</label>
+                  <input dir="ltr" v-model.number="measurementForm.hips" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
                 </div>
                 <div>
-                  <label class="text-[10px] text-brand-muted block">Sleeve Length</label>
-                  <input v-model.number="measurementForm.sleeve_length" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
+                  <label class="text-[10px] text-brand-muted block">{{ $tr("Sleeve Length") }}</label>
+                  <input dir="ltr" v-model.number="measurementForm.sleeve_length" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
                 </div>
               </div>
             </div>
 
             <!-- Trouser fields -->
             <div class="pt-2">
-              <span class="text-[10px] uppercase tracking-luxury text-brand-gold font-bold block mb-2">Trouser / Shalwar</span>
+              <span class="text-[10px] uppercase tracking-luxury text-brand-gold font-bold block mb-2">{{ $tr("Trouser / Shalwar") }}</span>
               <div class="grid grid-cols-3 gap-3">
                 <div>
-                  <label class="text-[10px] text-brand-muted block">Length</label>
-                  <input v-model.number="measurementForm.trouser_length" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
+                  <label class="text-[10px] text-brand-muted block">{{ $tr("Length") }}</label>
+                  <input dir="ltr" v-model.number="measurementForm.trouser_length" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
                 </div>
                 <div>
-                  <label class="text-[10px] text-brand-muted block">Waist</label>
-                  <input v-model.number="measurementForm.trouser_waist" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
+                  <label class="text-[10px] text-brand-muted block">{{ $tr("Waist") }}</label>
+                  <input dir="ltr" v-model.number="measurementForm.trouser_waist" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
                 </div>
                 <div>
-                  <label class="text-[10px] text-brand-muted block">Pancha</label>
-                  <input v-model.number="measurementForm.pancha" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
+                  <label class="text-[10px] text-brand-muted block">{{ $tr("Pancha") }}</label>
+                  <input dir="ltr" v-model.number="measurementForm.pancha" type="number" step="0.5" class="w-full border border-brand-border p-1.5 text-xs">
                 </div>
               </div>
             </div>
 
             <!-- Extra Notes -->
             <div>
-              <label class="text-[10px] uppercase text-brand-muted block mb-1">Fitting Notes / Preferences</label>
-              <textarea v-model="measurementForm.extra_notes" rows="2" placeholder="e.g. Keep shoulder loose, add lace to sleeves..." class="w-full border border-brand-border p-2 text-xs" />
+              <label class="text-[10px] uppercase text-brand-muted block mb-1">{{ $tr("Fitting Notes / Preferences") }}</label>
+              <textarea v-model="measurementForm.extra_notes" rows="2" :placeholder="$tr('e.g. Keep shoulder loose, add lace to sleeves...')" class="w-full border border-brand-border p-2 text-xs" />
             </div>
 
-            <div class="pt-4 flex justify-end space-x-3">
+            <div class="pt-4 flex justify-end space-x-3 rtl:space-x-reverse">
               <button
                 type="button"
                 class="px-5 py-2.5 border border-brand-border text-xs uppercase"
                 @click="measurementModalOpen = false"
               >
-                Cancel
+                {{ $tr("Cancel") }}
               </button>
               <button
                 type="submit"
                 class="px-6 py-2.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold"
               >
-                Save Profile
+                {{ $tr("Save Profile") }}
               </button>
             </div>
           </form>
@@ -979,8 +979,8 @@ const handleLogout = async () => {
           @click.stop
         >
           <button
-            class="absolute top-4 right-4 text-brand-charcoal hover:text-brand-gold p-1"
-            aria-label="Close modal"
+            class="absolute top-4 end-4 text-brand-charcoal hover:text-brand-gold p-1"
+            :aria-label="$tr('Close modal')"
             @click="addressModalOpen = false"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -989,33 +989,33 @@ const handleLogout = async () => {
           </button>
 
           <h2 class="font-serif text-xl sm:text-2xl font-bold text-brand-charcoal mb-1">
-            {{ editingAddressId ? 'Edit Address' : 'Add Delivery Address' }}
+            {{ editingAddressId ? $tr("Edit Address") : $tr("Add Delivery Address") }}
           </h2>
-          <p class="text-xs text-brand-muted mb-6">Saved addresses appear directly at checkout</p>
+          <p class="text-xs text-brand-muted mb-6">{{ $tr("Saved addresses appear directly at checkout") }}</p>
 
           <div v-if="addressFormError" class="p-3 bg-red-50 text-red-700 text-xs mb-4">
-            {{ addressFormError }}
+            {{ $tr(addressFormError) }}
           </div>
 
           <form class="space-y-4" @submit.prevent="saveAddress">
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="text-[10px] uppercase text-brand-charcoal font-semibold block mb-1">Label</label>
+                <label class="text-[10px] uppercase text-brand-charcoal font-semibold block mb-1">{{ $tr("Label") }}</label>
                 <input
                   v-model="addressForm.label"
                   type="text"
-                  placeholder="Home, Office, Studio..."
+                  :placeholder="$tr('Home, Office, Studio...')"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
               </div>
 
               <div>
-                <label class="text-[10px] uppercase text-brand-charcoal font-semibold block mb-1">Recipient Name *</label>
+                <label class="text-[10px] uppercase text-brand-charcoal font-semibold block mb-1">{{ $tr("Recipient Name *") }}</label>
                 <input
                   v-model="addressForm.recipient_name"
                   type="text"
                   required
-                  placeholder="Full Name"
+                  :placeholder="$tr('Full Name')"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
               </div>
@@ -1023,8 +1023,8 @@ const handleLogout = async () => {
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="text-[10px] uppercase text-brand-charcoal font-semibold block mb-1">Phone Number *</label>
-                <input
+                <label class="text-[10px] uppercase text-brand-charcoal font-semibold block mb-1">{{ $tr("Phone Number *") }}</label>
+                <input dir="ltr"
                   v-model="addressForm.phone"
                   type="tel"
                   required
@@ -1034,29 +1034,29 @@ const handleLogout = async () => {
               </div>
 
               <div>
-                <label class="text-[10px] uppercase text-brand-charcoal font-semibold block mb-1">City *</label>
+                <label class="text-[10px] uppercase text-brand-charcoal font-semibold block mb-1">{{ $tr("City *") }}</label>
                 <input
                   v-model="addressForm.city"
                   type="text"
                   required
-                  placeholder="Lahore, Karachi..."
+                  :placeholder="$tr('Lahore, Karachi...')"
                   class="w-full bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 >
               </div>
             </div>
 
             <div>
-              <label class="text-[10px] uppercase text-brand-charcoal font-semibold block mb-1">Street Address *</label>
+              <label class="text-[10px] uppercase text-brand-charcoal font-semibold block mb-1">{{ $tr("Street Address *") }}</label>
               <textarea
                 v-model="addressForm.address"
                 rows="2"
                 required
-                placeholder="House #, Street, Block, Area..."
+                :placeholder="$tr('House #, Street, Block, Area...')"
                 class="w-full bg-white border border-brand-border p-2.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
               />
             </div>
 
-            <div class="flex items-center space-x-2 pt-1">
+            <div class="flex items-center space-x-2 rtl:space-x-reverse pt-1">
               <input
                 id="default-address-cb"
                 v-model="addressForm.is_default"
@@ -1064,23 +1064,23 @@ const handleLogout = async () => {
                 class="h-4 w-4 accent-brand-charcoal"
               >
               <label for="default-address-cb" class="text-xs text-brand-charcoal cursor-pointer">
-                Set as my default shipping address
+                {{ $tr("Set as my default shipping address") }}
               </label>
             </div>
 
-            <div class="pt-4 flex justify-end space-x-3">
+            <div class="pt-4 flex justify-end space-x-3 rtl:space-x-reverse">
               <button
                 type="button"
                 class="px-5 py-2.5 border border-brand-border text-xs uppercase"
                 @click="addressModalOpen = false"
               >
-                Cancel
+                {{ $tr("Cancel") }}
               </button>
               <button
                 type="submit"
                 class="px-6 py-2.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold"
               >
-                Save Address
+                {{ $tr("Save Address") }}
               </button>
             </div>
           </form>

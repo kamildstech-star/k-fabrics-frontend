@@ -53,26 +53,26 @@ const handleRegister = async () => {
       <!-- Header -->
       <div class="text-center mb-8">
         <span class="text-[10px] uppercase tracking-[0.3em] text-brand-gold font-semibold block mb-1">
-          Join the Atelier
+          {{ $tr("Join the Atelier") }}
         </span>
         <h1 class="font-serif text-3xl font-bold text-brand-charcoal">
-          Create Account
+          {{ $tr("Create Account") }}
         </h1>
         <p class="text-xs text-brand-muted mt-2 font-light">
-          Enjoy faster checkout, saved body measurement profiles, and order status notifications.
+          {{ $tr("Enjoy faster checkout, saved body measurement profiles, and order status notifications.") }}
         </p>
       </div>
 
       <!-- Error Alert -->
       <div v-if="errorMsg" role="alert" class="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 text-xs">
-        {{ errorMsg }}
+        {{ $tr(errorMsg) }}
       </div>
 
       <!-- Register Form -->
       <form class="space-y-4" @submit.prevent="handleRegister">
         <div>
           <label for="signup-name" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
-            Full Name *
+            {{ $tr("Full Name *") }}
           </label>
           <input
             id="signup-name"
@@ -80,16 +80,16 @@ const handleRegister = async () => {
             autocomplete="name"
             type="text"
             required
-            placeholder="e.g. Mahnoor Tariq"
+            :placeholder="$tr('e.g. Mahnoor Tariq')"
             class="w-full bg-white border border-brand-border px-3.5 py-2.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
           >
         </div>
 
         <div>
           <label for="signup-email" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
-            Email Address *
+            {{ $tr("Email Address *") }}
           </label>
-          <input
+          <input dir="ltr"
             id="signup-email"
             v-model="form.email"
             autocomplete="email"
@@ -102,9 +102,9 @@ const handleRegister = async () => {
 
         <div>
           <label for="signup-phone" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
-            Phone Number (WhatsApp)
+            {{ $tr("Phone Number (WhatsApp)") }}
           </label>
-          <input
+          <input dir="ltr"
             id="signup-phone"
             v-model="form.phone"
             autocomplete="tel"
@@ -116,9 +116,9 @@ const handleRegister = async () => {
 
         <div>
           <label for="signup-password" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
-            Password *
+            {{ $tr("Password *") }}
           </label>
-          <input
+          <input dir="ltr"
             id="signup-password"
             v-model="form.password"
             autocomplete="new-password"
@@ -126,22 +126,22 @@ const handleRegister = async () => {
             required
             minlength="12"
             maxlength="72"
-            placeholder="Minimum 12 characters"
+            :placeholder="$tr('Minimum 12 characters')"
             class="w-full bg-white border border-brand-border px-3.5 py-2.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
           >
         </div>
 
         <div>
           <label for="signup-password_confirmation" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block mb-1">
-            Confirm Password *
+            {{ $tr("Confirm Password *") }}
           </label>
-          <input
+          <input dir="ltr"
             id="signup-password_confirmation"
             v-model="form.password_confirmation"
             autocomplete="new-password"
             type="password"
             required
-            placeholder="Re-type password"
+            :placeholder="$tr('Re-type password')"
             class="w-full bg-white border border-brand-border px-3.5 py-2.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
           >
         </div>
@@ -151,19 +151,19 @@ const handleRegister = async () => {
           :disabled="isSubmitting"
           class="w-full py-4 mt-2 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors duration-200 disabled:opacity-50 shadow-md"
         >
-          <span v-if="isSubmitting">Creating Account...</span>
-          <span v-else>Register Profile</span>
+          <span v-if="isSubmitting">{{ $tr("Creating Account...") }}</span>
+          <span v-else>{{ $tr("Register Profile") }}</span>
         </button>
       </form>
 
       <!-- Login Link -->
       <div class="mt-8 pt-6 border-t border-brand-border text-center text-xs text-brand-muted">
-        Already have an account?
+        {{ $tr("Already have an account?") }}
         <NuxtLink
           to="/login"
-          class="text-brand-charcoal font-semibold hover:text-brand-gold ml-1 underline underline-offset-4"
+          class="text-brand-charcoal font-semibold hover:text-brand-gold ms-1 underline underline-offset-4"
         >
-          Sign In
+          {{ $tr("Sign In") }}
         </NuxtLink>
       </div>
     </div>

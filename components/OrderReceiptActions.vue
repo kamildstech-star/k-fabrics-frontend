@@ -8,6 +8,7 @@ const props = defineProps<{
   load?: () => Promise<OrderReceipt>
 }>()
 
+const { $storefrontLanguage: { language } } = useNuxtApp()
 const busy = ref(false)
 const error = ref('')
 const message = ref('')
@@ -38,7 +39,8 @@ const saveReceipt = async (mode: 'download' | 'print') => {
     const receipt = await getReceipt()
     if (!active) return
     const trackingUrl = new URL('/track-order', window.location.origin).href
-    const markup = receiptMarkup(receipt, props.trackingCode || null, trackingUrl)
+    const receiptLanguage = language.value
+    const markup = receiptMarkup(receipt, props.trackingCode || null, trackingUrl, receiptLanguage)
     if (mode === 'print') {
       stopPrint()
       printMarkup.value = `<style>${receiptStyles}</style>${markup}`
@@ -47,7 +49,7 @@ const saveReceipt = async (mode: 'download' | 'print') => {
       await nextTick()
       window.print()
     } else {
-      const url = URL.createObjectURL(new Blob([receiptDocument(markup)], { type: 'text/html;charset=utf-8' }))
+      const url = URL.createObjectURL(new Blob([receiptDocument(markup, receiptLanguage)], { type: 'text/html;charset=utf-8' }))
       const link = document.createElement('a')
       link.href = url
       link.download = `K-Fabrics-receipt-${receipt.order_number.replace(/[^A-Za-z0-9-]/g, '_')}.html`
@@ -76,14 +78,14 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="space-y-2">
-    <p v-if="trackingCode" class="text-sm text-brand-charcoal">The saved or printed copy includes your private tracking code. Keep it somewhere safe.</p>
+    <p v-if="trackingCode" class="text-sm text-brand-charcoal">{{ $tr("The saved or printed copy includes your private tracking code. Keep it somewhere safe.") }}</p>
     <div class="flex flex-wrap gap-2">
-      <button type="button" class="border border-brand-charcoal px-3 py-2 font-semibold disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" :disabled="busy" @click="saveReceipt('download')">Download receipt</button>
-      <button type="button" class="border border-brand-charcoal px-3 py-2 font-semibold disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" :disabled="busy" @click="saveReceipt('print')">Print receipt</button>
+      <button type="button" class="border border-brand-charcoal px-3 py-2 font-semibold disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" :disabled="busy" @click="saveReceipt('download')">{{ $tr("Download receipt") }}</button>
+      <button type="button" class="border border-brand-charcoal px-3 py-2 font-semibold disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" :disabled="busy" @click="saveReceipt('print')">{{ $tr("Print receipt") }}</button>
     </div>
-    <p v-if="busy" role="status">Preparing receipt…</p>
-    <p v-if="message" role="status">{{ message }}</p>
-    <p v-if="error" role="alert" class="text-red-800">{{ error }}</p>
+    <p v-if="busy" role="status">{{ $tr("Preparing receipt…") }}</p>
+    <p v-if="message" role="status">{{ $tr(message) }}</p>
+    <p v-if="error" role="alert" class="text-red-800">{{ $tr(error) }}</p>
     <Teleport v-if="printMarkup" to="body">
       <!-- The builder escapes dynamic values before it produces the printable fragment. -->
       <div class="kf-guest-receipt-print" v-html="printMarkup" />

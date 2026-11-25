@@ -138,6 +138,24 @@ try {
       assert.ok((await optimized.arrayBuffer()).byteLength > 100)
     }
   }
+  for (const [path, localizedCopy] of [
+    ['/', 'ریڈی ٹو ویئر خریدیں'],
+    ['/shop', 'ریڈی ٹو ویئر کلیکشن'],
+    ['/checkout', 'چیک آؤٹ'],
+    ['/track-order', 'نجی ٹریکنگ کوڈ'],
+    ['/stitching', 'حسبِ پیمائش سلائی کا اسٹوڈیو'],
+    ['/faq', 'ڈیلیوری کے چارجز اور مدت کیا ہیں؟'],
+    [`/products/${product.slug}`, 'سائز گائیڈ'],
+  ]) {
+    const response = await fetch(new URL(path, url), { headers: { cookie: 'kf_language=ur' }, signal: AbortSignal.timeout(4_000) })
+    assert.equal(response.status, 200, path)
+    assert.match(response.headers.get('vary') || '', /\bcookie\b/i)
+    const html = await response.text()
+    assert.match(html, /<html[^>]+lang="ur-PK"/, path)
+    assert.match(html, /<html[^>]+dir="rtl"/, path)
+    assert.ok(html.includes(localizedCopy), `Urdu SSR copy: ${path}`)
+    if (path.startsWith('/products/')) assert.ok(html.includes(product.name), 'Catalog data is not machine-translated')
+  }
   const canonicalFrom = html => html.match(/<link[^>]*rel="canonical"[^>]*href="([^"]+)"/)?.[1]?.replaceAll('&amp;', '&')
   const productPath = `/products/${product.slug}`
   const pdp = await get(`${productPath}?utm_source=newsletter`)

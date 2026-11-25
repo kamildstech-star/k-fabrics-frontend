@@ -3,6 +3,7 @@ import { useCartStore } from '~/stores/cart'
 import { useAuthStore } from '~/stores/auth'
 import { useWishlistStore } from '~/stores/wishlist'
 
+const { $storefrontLanguage: { isUrdu, toggle: toggleLanguage } } = useNuxtApp()
 const cart = useCartStore()
 const auth = useAuthStore()
 const wishlist = useWishlistStore()
@@ -30,18 +31,18 @@ const chatUrl = computed(() => whatsapp())
   <header class="sticky top-0 z-40 bg-brand-white border-b border-brand-border">
     <!-- Top Announcement Bar -->
     <div class="bg-brand-charcoal text-white text-[11px] py-2 px-4 text-center text-center tracking-wider font-light flex items-center justify-center">
-      <span>Free Delivery on Orders Above Rs. 5,000 | Custom Stitching Available</span>
+      <span>{{ $tr("Free Delivery on Orders Above Rs. 5,000 | Custom Stitching Available") }}</span>
     </div>
 
     <!-- Main Navigation Bar -->
-    <div class="mx-auto flex h-20 max-w-7xl items-center justify-between gap-2 px-3 sm:px-6 lg:px-8">
+    <div class="mx-auto flex h-20 max-w-7xl items-center justify-between gap-1 px-2 min-[360px]:gap-2 min-[360px]:px-3 sm:px-6 lg:px-8">
       <!-- Mobile Menu Trigger -->
       <div class="flex shrink-0 items-center lg:hidden">
         <button
           id="mobile-navigation-trigger"
           type="button"
-          class="-ml-1 p-1.5 text-brand-charcoal"
-          aria-label="Open navigation menu"
+          class="-ms-1 p-1.5 text-brand-charcoal"
+          :aria-label="$tr('Open navigation menu')"
           aria-haspopup="dialog"
           aria-controls="mobile-navigation-dialog"
           :aria-expanded="mobileMenuOpen"
@@ -54,44 +55,55 @@ const chatUrl = computed(() => whatsapp())
       </div>
 
       <!-- Desktop Left Navigation Links -->
-      <nav aria-label="Main navigation" class="hidden lg:flex items-center space-x-8 text-xs font-medium uppercase tracking-luxury text-brand-charcoal">
+      <nav :aria-label="$tr('Main navigation')" class="hidden lg:flex items-center space-x-8 rtl:space-x-reverse text-xs font-medium uppercase tracking-luxury text-brand-charcoal">
         <NuxtLink to="/shop?sort=newest" class="hover:text-brand-gold transition-colors">
-          New In
+          {{ $tr("New In") }}
         </NuxtLink>
         <NuxtLink to="/shop?category=daily-pret" class="hover:text-brand-gold transition-colors">
-          Pret
+          {{ $tr("Pret") }}
         </NuxtLink>
         <NuxtLink to="/shop?category=co-ord-sets" class="hover:text-brand-gold transition-colors">
-          Co-ords
+          {{ $tr("Co-ords") }}
         </NuxtLink>
         <NuxtLink to="/stitching" class="hover:text-brand-gold transition-colors text-brand-gold">
-          Custom Stitching
+          {{ $tr("Custom Stitching") }}
         </NuxtLink>
         <NuxtLink to="/track-order" class="hover:text-brand-gold transition-colors">
-          Track Order
+          {{ $tr("Track Order") }}
         </NuxtLink>
       </nav>
 
       <!-- Center Luxury Serif Logo -->
       <div class="min-w-0 text-center">
         <NuxtLink to="/" class="inline-block">
-          <span class="whitespace-nowrap font-serif text-lg min-[360px]:text-2xl sm:text-3xl font-bold tracking-luxury text-brand-charcoal uppercase select-none">
+          <span class="whitespace-nowrap font-serif text-base min-[360px]:text-2xl sm:text-3xl font-bold tracking-luxury text-brand-charcoal uppercase select-none" lang="en" dir="ltr">
             K. Fabrics
           </span>
-          <span class="block whitespace-nowrap text-[7px] min-[360px]:text-[8px] tracking-[0.24em] min-[360px]:tracking-[0.3em] uppercase text-brand-muted -mt-1 font-sans">
-            Minimalist Luxury
+          <span class="block whitespace-nowrap text-[7px] min-[360px]:text-[8px] tracking-[0.12em] min-[360px]:tracking-[0.3em] uppercase text-brand-muted -mt-1 font-sans">
+            {{ $tr("Minimalist Luxury") }}
           </span>
         </NuxtLink>
       </div>
 
       <!-- Right Utility Actions -->
       <div class="flex shrink-0 items-center gap-0.5 text-brand-charcoal min-[360px]:gap-2 sm:gap-5">
+        <button
+          type="button"
+          data-language-switch
+          class="min-h-11 min-w-11 shrink-0 rounded border border-brand-border px-1.5 text-xs font-semibold hover:border-brand-charcoal sm:px-2"
+          :lang="isUrdu ? 'en-PK' : 'ur-PK'"
+          :dir="isUrdu ? 'ltr' : 'rtl'"
+          :aria-label="isUrdu ? 'Switch to English' : 'ویب سائٹ اردو میں دیکھیں'"
+          @click="toggleLanguage"
+        >
+          {{ isUrdu ? 'EN' : 'اردو' }}
+        </button>
         <!-- Search Trigger -->
         <button
           id="site-search-trigger"
           type="button"
           class="p-1.5 transition-colors hover:text-brand-gold"
-          aria-label="Search collection"
+          :aria-label="$tr('Search collection')"
           aria-haspopup="dialog"
           aria-controls="storefront-search-dialog"
           :aria-expanded="searchOpen"
@@ -106,7 +118,7 @@ const chatUrl = computed(() => whatsapp())
         <NuxtLink
           to="/wishlist"
           class="relative flex items-center p-1.5 transition-colors hover:text-brand-gold"
-          aria-label="Saved Wishlist"
+          :aria-label="$tr('Saved Wishlist')"
         >
           <svg
             class="w-5 h-5 transition-colors"
@@ -118,7 +130,7 @@ const chatUrl = computed(() => whatsapp())
           </svg>
           <span
             v-if="wishlist.totalItems > 0"
-            class="absolute -top-1.5 right-0 bg-brand-charcoal text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold"
+            class="absolute -top-1.5 end-0 bg-brand-charcoal text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold"
           >
             {{ wishlist.totalItems }}
           </span>
@@ -127,9 +139,9 @@ const chatUrl = computed(() => whatsapp())
         <!-- Account Link -->
         <NuxtLink
           :to="auth.isAuthenticated ? '/account' : '/login'"
-          class="flex items-center space-x-1 p-1.5 transition-colors hover:text-brand-gold"
-          :aria-label="auth.isAuthenticated ? 'Customer Account' : 'Sign In'"
-          :title="auth.isAuthenticated ? `Signed in as ${auth.userName}` : 'Sign In'"
+          class="flex items-center space-x-1 rtl:space-x-reverse p-1.5 transition-colors hover:text-brand-gold"
+          :aria-label="auth.isAuthenticated ? $tr('Customer Account') : $tr('Sign In')"
+          :title="auth.isAuthenticated ? $tr('Signed in as {arg0}', { arg0: auth.userName }) : $tr('Sign In')"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -144,7 +156,7 @@ const chatUrl = computed(() => whatsapp())
           class="relative flex items-center p-1.5 transition-colors hover:text-brand-gold"
           id="site-cart-trigger"
           type="button"
-          aria-label="Open shopping bag"
+          :aria-label="$tr('Open shopping bag')"
           aria-haspopup="dialog"
           aria-controls="shopping-bag-dialog"
           :aria-expanded="cart.isOpen"
@@ -155,7 +167,7 @@ const chatUrl = computed(() => whatsapp())
           </svg>
           <span
             v-if="cart.totalItems > 0"
-            class="absolute -top-1.5 right-0 bg-brand-gold text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold"
+            class="absolute -top-1.5 end-0 bg-brand-gold text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold"
           >
             {{ cart.totalItems }}
           </span>
@@ -173,7 +185,7 @@ const chatUrl = computed(() => whatsapp())
         ref="menuDialog"
         aria-labelledby="mobile-navigation-title"
         aria-modal="true"
-        class="storefront-dialog storefront-dialog--left fixed inset-y-0 left-0 right-auto m-0 h-[100dvh] max-h-none w-4/5 max-w-sm overflow-y-auto overscroll-contain border-r border-brand-border bg-brand-white p-0 text-brand-charcoal shadow-2xl"
+        class="storefront-dialog storefront-dialog--left fixed inset-y-0 start-0 end-auto m-0 h-[100dvh] max-h-none w-4/5 max-w-sm overflow-y-auto overscroll-contain border-e border-brand-border bg-brand-white p-0 text-brand-charcoal shadow-2xl"
         @cancel="onMenuCancel"
         @keydown="onMenuKeydown"
         @click.self="closeMobileMenu"
@@ -182,11 +194,11 @@ const chatUrl = computed(() => whatsapp())
         <div>
           <!-- Close button -->
           <div class="flex items-center justify-between pb-6 border-b border-brand-border">
-            <h2 id="mobile-navigation-title" class="font-serif text-lg font-bold tracking-luxury text-brand-charcoal">Menu</h2>
+            <h2 id="mobile-navigation-title" class="font-serif text-lg font-bold tracking-luxury text-brand-charcoal">{{ $tr("Menu") }}</h2>
             <button
               type="button"
               class="p-2 text-brand-charcoal"
-              aria-label="Close menu"
+              :aria-label="$tr('Close menu')"
               data-dialog-initial-focus
               @click="closeMobileMenu"
             >
@@ -197,56 +209,56 @@ const chatUrl = computed(() => whatsapp())
           </div>
 
           <!-- Nav Items -->
-          <nav aria-label="Mobile navigation" class="flex flex-col space-y-5 py-6 text-sm font-medium uppercase tracking-luxury">
+          <nav :aria-label="$tr('Mobile navigation')" class="flex flex-col space-y-5 py-6 text-sm font-medium uppercase tracking-luxury">
             <NuxtLink
               to="/shop?sort=newest"
               class="text-brand-charcoal hover:text-brand-gold transition-colors"
               @click="mobileMenuOpen = false"
             >
-              New In
+              {{ $tr("New In") }}
             </NuxtLink>
             <NuxtLink
               to="/shop?category=daily-pret"
               class="text-brand-charcoal hover:text-brand-gold transition-colors"
               @click="mobileMenuOpen = false"
             >
-              Daily Pret
+              {{ $tr("Daily Pret") }}
             </NuxtLink>
             <NuxtLink
               to="/shop?category=co-ord-sets"
               class="text-brand-charcoal hover:text-brand-gold transition-colors"
               @click="mobileMenuOpen = false"
             >
-              Co-ord Sets
+              {{ $tr("Co-ord Sets") }}
             </NuxtLink>
             <NuxtLink
               to="/shop?category=festive-edit"
               class="text-brand-charcoal hover:text-brand-gold transition-colors"
               @click="mobileMenuOpen = false"
             >
-              Festive Edit
+              {{ $tr("Festive Edit") }}
             </NuxtLink>
             <NuxtLink
               to="/stitching"
-              class="text-brand-gold font-semibold flex items-center space-x-1"
+              class="text-brand-gold font-semibold flex items-center space-x-1 rtl:space-x-reverse"
               @click="mobileMenuOpen = false"
             >
-              <span>Custom Stitching</span>
-              <span class="text-[9px] bg-brand-gold text-white px-1.5 py-0.2 tracking-normal">Bespoke</span>
+              <span>{{ $tr("Custom Stitching") }}</span>
+              <span class="text-[9px] bg-brand-gold text-white px-1.5 py-0.2 tracking-normal">{{ $tr("Bespoke") }}</span>
             </NuxtLink>
             <NuxtLink
               to="/track-order"
               class="text-brand-charcoal hover:text-brand-gold transition-colors"
               @click="mobileMenuOpen = false"
             >
-              Track Order
+              {{ $tr("Track Order") }}
             </NuxtLink>
             <NuxtLink
               to="/wishlist"
               class="text-brand-charcoal hover:text-brand-gold transition-colors flex items-center justify-between"
               @click="mobileMenuOpen = false"
             >
-              <span>Wishlist</span>
+              <span>{{ $tr("Wishlist") }}</span>
               <span v-if="wishlist.totalItems > 0" class="text-xs font-bold text-brand-gold">
                 ({{ wishlist.totalItems }})
               </span>
@@ -256,21 +268,21 @@ const chatUrl = computed(() => whatsapp())
               class="text-brand-charcoal hover:text-brand-gold transition-colors font-semibold"
               @click="mobileMenuOpen = false"
             >
-              {{ auth.isAuthenticated ? 'My Account' : 'Sign In / Register' }}
+              {{ auth.isAuthenticated ? $tr("My Account") : $tr("Sign In / Register") }}
             </NuxtLink>
           </nav>
         </div>
 
         <!-- Mobile Footer Contact -->
         <div v-if="chatUrl" class="pt-6 border-t border-brand-border text-xs text-brand-muted space-y-2">
-          <p>Assistance & Styling Advice:</p>
+          <p>{{ $tr("Assistance & Styling Advice:") }}</p>
           <a
             :href="chatUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="flex items-center space-x-2 text-brand-charcoal font-medium hover:text-brand-gold"
+            class="flex items-center space-x-2 rtl:space-x-reverse text-brand-charcoal font-medium hover:text-brand-gold"
           >
-            <span>Chat on WhatsApp</span>
+            <span>{{ $tr("Chat on WhatsApp") }}</span>
           </a>
         </div>
        </div>

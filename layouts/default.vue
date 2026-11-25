@@ -28,7 +28,7 @@ onMounted(async () => {
 
 <template>
   <div class="min-h-screen flex flex-col bg-brand-white text-brand-charcoal antialiased">
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a href="#main-content" class="skip-link">{{ $tr("Skip to main content") }}</a>
 
     <!-- Sticky Navigation & Announcement Bar -->
     <AppHeader />

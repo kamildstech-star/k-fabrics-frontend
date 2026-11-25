@@ -31,17 +31,17 @@ async function requestCode() {
 <template>
   <div class="mx-auto max-w-lg px-5 py-12">
     <section class="space-y-5 border border-brand-border bg-brand-cream/40 p-5 sm:p-8">
-      <h1 class="font-serif text-3xl font-bold">Forgot your password?</h1>
-      <p v-if="available === null" role="status">Checking email recovery…</p>
-      <p v-if="submitted" role="status">If the email matches an account, we’ll send a private reset code. Check your inbox and spam folder.</p>
+      <h1 class="font-serif text-3xl font-bold">{{ $tr("Forgot your password?") }}</h1>
+      <p v-if="available === null" role="status">{{ $tr("Checking email recovery…") }}</p>
+      <p v-if="submitted" role="status">{{ $tr("If the email matches an account, we’ll send a private reset code. Check your inbox and spam folder.") }}</p>
       <form v-else-if="available" class="space-y-3" @submit.prevent="requestCode">
-        <p>Enter the email address you use to sign in.</p>
-        <label for="password-recovery-email" class="block font-semibold">Account email</label>
-        <input id="password-recovery-email" v-model="email" class="w-full border border-brand-border bg-white p-3" type="email" autocomplete="email" maxlength="255" required>
-        <p v-if="error" role="alert" class="text-red-800">{{ error }}</p>
-        <button class="bg-brand-charcoal px-4 py-3 font-semibold text-white disabled:opacity-50" :disabled="busy" type="submit">{{ busy ? 'Requesting…' : 'Request a reset code' }}</button>
+        <p>{{ $tr("Enter the email address you use to sign in.") }}</p>
+        <label for="password-recovery-email" class="block font-semibold">{{ $tr("Account email") }}</label>
+        <input dir="ltr" id="password-recovery-email" v-model="email" class="w-full border border-brand-border bg-white p-3" type="email" autocomplete="email" maxlength="255" required>
+        <p v-if="error" role="alert" class="text-red-800">{{ $tr(error) }}</p>
+        <button class="bg-brand-charcoal px-4 py-3 font-semibold text-white disabled:opacity-50" :disabled="busy" type="submit">{{ busy ? $tr("Requesting…") : $tr("Request a reset code") }}</button>
       </form>
-      <p><NuxtLink class="underline font-semibold" to="/reset-password">Enter a reset code</NuxtLink> · <NuxtLink class="underline" to="/login">Back to sign in</NuxtLink></p>
+      <p><NuxtLink class="underline font-semibold" to="/reset-password">{{ $tr("Enter a reset code") }}</NuxtLink> · <NuxtLink class="underline" to="/login">{{ $tr("Back to sign in") }}</NuxtLink></p>
       <RecoverySupport :unavailable="available === false" />
     </section>
   </div>
