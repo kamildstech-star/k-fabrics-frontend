@@ -123,7 +123,7 @@ const chatUrl = computed(() => whatsapp('Hello K. Fabrics, I have a question abo
             Privacy Policy & Terms
           </NuxtLink>
           <NuxtLink to="/policies/returns" class="hover:text-brand-charcoal transition-colors">
-            7-Day Exchange
+            Returns &amp; Exchanges
           </NuxtLink>
           <NuxtLink to="/policies/shipping" class="hover:text-brand-charcoal transition-colors">
             Shipping Policy

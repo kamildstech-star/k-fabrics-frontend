@@ -5,9 +5,18 @@ import CartDrawer from '~/components/CartDrawer.vue'
 import { useCartStore } from '~/stores/cart'
 import { useAuthStore } from '~/stores/auth'
 import { useWishlistStore } from '~/stores/wishlist'
+import { indexableStaticPaths, storefrontUrl } from '~/utils/seo'
 
 const auth = useAuthStore()
 const wishlist = useWishlistStore()
+const route = useRoute()
+const { public: { siteUrl } } = useRuntimeConfig()
+useHead(() => {
+  const path = route.path.replace(/\/+$/, '') || '/'
+  return indexableStaticPaths.some(indexable => indexable === path)
+    ? { link: [{ rel: 'canonical', href: storefrontUrl(siteUrl, path) }] }
+    : {}
+})
 const cart = useCartStore()
 useTailoringUnloadWarning(() => cart.hasTailoring)
 

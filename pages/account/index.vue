@@ -550,6 +550,11 @@ const handleLogout = async () => {
                   </div>
 
                   <div class="flex items-center space-x-3">
+                    <NuxtLink
+                      v-if="order.order_status === 'delivered'"
+                      to="/policies/returns#request"
+                      class="px-3 py-2 border border-brand-border text-sm"
+                    >Return or exchange</NuxtLink>
                     <button
                       class="px-4 py-2 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors shadow-sm"
                       title="Add available ready-to-wear items at current prices"

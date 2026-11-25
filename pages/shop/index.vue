@@ -4,12 +4,13 @@ import CatalogFilters from '~/components/CatalogFilters.vue'
 import type { LocationQueryRaw } from 'vue-router'
 import { catalogSort, defaultCatalogSort, normalizeDiscoverySearch, normalizedFacet } from '~/utils/discovery'
 import type { FacetOption, FilterGroup, FilterKey, ProductFacets } from '~/utils/discovery'
+import { collectionPath, storefrontUrl, upstreamHttpStatus } from '~/utils/seo'
 
 type CatalogProduct = InstanceType<typeof ProductCard>['$props']['product']
 type CatalogCategory = { name: string; slug: string; children?: CatalogCategory[] }
 type CatalogResults = { data: CatalogProduct[]; meta: { current_page: number; last_page: number; total: number } }
 
-const { public: { apiBase } } = useRuntimeConfig()
+const { public: { apiBase, siteUrl } } = useRuntimeConfig()
 const route = useRoute()
 const router = useRouter()
 const mobileFilterOpen = ref(false)
@@ -73,8 +74,15 @@ const groups = computed<FilterGroup[]>(() => [
   { key: 'color', name: 'Color', options: facets.value?.colors || [] },
 ])
 const products = computed(() => catalog.data.value?.data || [])
-const catalogFailed = computed(() => Boolean(catalog.error.value) ||
-  (catalog.status.value === 'success' && !Array.isArray(catalog.data.value?.data)))
+const validCatalog = computed(() => {
+  const result = catalog.data.value
+  return Array.isArray(result?.data)
+    && Number.isInteger(result.meta?.current_page)
+    && Number.isInteger(result.meta?.last_page) && result.meta.last_page >= 1
+    && Number.isInteger(result.meta?.total) && result.meta.total >= 0
+})
+const catalogFailed = computed(() => Boolean(catalog.error.value)
+  || (catalog.status.value === 'success' && !validCatalog.value))
 const meta = computed(() => catalog.data.value?.meta || { current_page: 1, last_page: 1, total: 0 })
 const activeChips = computed(() => groups.value.flatMap(group => {
   const value = selected.value[group.key]
@@ -87,8 +95,41 @@ const pageTitle = computed(() => {
   if (search.value) return `Search results for “${search.value}”`
   return categories.value.find(category => category.id === selected.value.category)?.label || 'Ready-to-Wear Collection'
 })
-const title = computed(() => `${pageTitle.value} | K. Fabrics`)
-useSeoMeta({ title, ogTitle: title, description: 'Browse ready-to-wear fabrics and discover your preferred sizes, colors, and collections.' })
+const title = computed(() => `${pageTitle.value}${page.value > 1 ? ` – Page ${page.value}` : ''} | K. Fabrics`)
+const adHocFilters = computed(() => Boolean(
+  selected.value.size || selected.value.fabric_type || selected.value.piece_type
+    || selected.value.color || minPrice.value || maxPrice.value,
+))
+const shopStatus = computed<200 | 400 | 404 | 503>(() => {
+  if (catalogFailed.value) {
+    return [400, 422].includes(upstreamHttpStatus(catalog.error.value) ?? 0) ? 400 : 503
+  }
+  if (!catalog.pending.value && validCatalog.value
+    && (page.value > meta.value.last_page
+      || (!products.value.length && (adHocFilters.value || Boolean(selected.value.category && !search.value))))) {
+    return 404
+  }
+  return 200
+})
+const keepIndexed = computed(() => shopStatus.value === 200 && !catalog.pending.value
+  && validCatalog.value && products.value.length > 0 && !search.value && !adHocFilters.value
+  && sort.value === defaultCatalogSort(''))
+const canonical = computed(() => keepIndexed.value
+  ? storefrontUrl(siteUrl, collectionPath(selected.value.category, page.value))
+  : undefined)
+if (import.meta.server && shopStatus.value !== 200) {
+  setResponseStatus(shopStatus.value)
+  useResponseHeader('Cache-Control').value = 'no-store'
+  if (shopStatus.value === 503) useResponseHeader('Retry-After').value = '60'
+}
+useSeoMeta({
+  title,
+  ogTitle: title,
+  ogUrl: canonical,
+  description: 'Browse ready-to-wear fabrics and discover your preferred sizes, colors, and collections.',
+  robots: () => keepIndexed.value || shopStatus.value === 503 ? undefined : 'noindex, follow',
+})
+useHead(() => canonical.value ? { link: [{ rel: 'canonical', href: canonical.value }] } : {})
 
 function patchQuery(changes: Record<string, string>, resetPage = true) {
   const next: LocationQueryRaw = { ...route.query }
@@ -101,7 +142,18 @@ function patchQuery(changes: Record<string, string>, resetPage = true) {
 }
 const changeFilter = (key: FilterKey, value: string) => void patchQuery({ [key]: value })
 const changeSort = (event: Event) => void patchQuery({ sort: (event.target as HTMLSelectElement).value })
-const changePage = (value: number) => void patchQuery({ page: String(value) }, false)
+function pageLocation(value: number) {
+  const query: LocationQueryRaw = Object.fromEntries(Object.entries({
+    ...selected.value,
+    search: search.value,
+    min_price: minPrice.value,
+    max_price: maxPrice.value,
+    sort: sort.value === defaultCatalogSort(search.value) ? '' : sort.value,
+    page: value > 1 ? String(value) : '',
+  }).filter(([, value]) => value))
+  return { path: '/shop', query }
+}
+const changePage = (value: number) => void router.push(pageLocation(value))
 const changePrice = (min: string, max: string) => { void patchQuery({ min_price: min, max_price: max }); closeFilters() }
 const clearFilters = () => { void patchQuery({ category: '', size: '', fabric_type: '', piece_type: '', color: '', min_price: '', max_price: '' }); closeFilters() }
 const retryFacets = () => { void facetData.refresh(); if (categoryData.error.value) void categoryData.refresh() }
@@ -181,9 +233,11 @@ const retryFacets = () => { void facetData.refresh(); if (categoryData.error.val
         </div>
 
         <nav v-if="!catalogFailed && !catalog.pending.value && meta.last_page > 1" aria-label="Product pages" class="flex flex-wrap items-center justify-between gap-2 mt-8">
-          <button type="button" :disabled="page <= 1" class="catalog-outline" @click="changePage(page - 1)">Previous</button>
+          <NuxtLink v-if="page > 1" :to="pageLocation(page - 1)" class="catalog-outline" prefetch-on="interaction" aria-label="Previous product page">Previous</NuxtLink>
+          <span v-else class="catalog-outline opacity-50" aria-disabled="true">Previous</span>
           <span class="text-sm">Page {{ meta.current_page }} of {{ meta.last_page }}</span>
-          <button type="button" :disabled="page >= meta.last_page" class="catalog-outline" @click="changePage(page + 1)">Next</button>
+          <NuxtLink v-if="page < meta.last_page" :to="pageLocation(page + 1)" class="catalog-outline" prefetch-on="interaction" aria-label="Next product page">Next</NuxtLink>
+          <span v-else class="catalog-outline opacity-50" aria-disabled="true">Next</span>
         </nav>
       </section>
     </div>

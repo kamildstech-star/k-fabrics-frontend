@@ -152,7 +152,7 @@ useSeoMeta({
           <span class="text-xs font-mono text-brand-gold font-bold">03 / FIT GUARANTEE</span>
           <h4 class="font-serif text-lg text-brand-charcoal font-semibold">Post-Delivery Fit Care</h4>
           <p class="text-xs text-brand-muted leading-relaxed font-light">
-            Should your bespoke tailored garment require slight fine-tuning, our atelier provides complimentary alteration support within 7 days.
+            If your custom garment differs from the agreed fit, you can report the issue for the atelier to review.
           </p>
         </div>
       </div>

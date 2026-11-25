@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { apiError, apiStatus } from '~/utils/api-error'
+import { formatPrice } from '~/utils/checkout'
 import type { OrderTracking } from '~/utils/checkout'
 import type { OrderReceipt } from '~/utils/order-receipt'
 import { useAuthStore } from '~/stores/auth'
@@ -12,6 +13,7 @@ const orderNumber = ref('')
 const trackingToken = ref('')
 const receiptCode = ref('')
 const searching = ref(false)
+const recoveryOpen = ref(false)
 const searchError = ref('')
 const result = ref<OrderTracking | null>(null)
 const resultTitle = ref<HTMLElement | null>(null)
@@ -77,7 +79,7 @@ const loadReceipt = async (): Promise<OrderReceipt> => {
 
 onMounted(() => {
   // Strip legacy tracking links instead of using any phone number or token from the URL.
-  if (Object.keys(route.query).length) void router.replace({ path: '/track-order', query: {} })
+  if (route.hash || Object.keys(route.query).length) void router.replace({ path: '/track-order', query: {}, hash: '' })
   if (!handoff.value) return
   orderNumber.value = handoff.value.orderNumber
   trackingToken.value = handoff.value.token
@@ -124,6 +126,22 @@ onMounted(() => {
           <template v-if="result.courier_name"><dt>Courier</dt><dd>{{ result.courier_name }}</dd></template>
           <template v-if="result.tracking_number"><dt>Tracking number</dt><dd class="break-all">{{ result.tracking_number }}</dd></template>
         </dl>
+        <div v-if="result.bank_balance" class="space-y-2 border-t border-brand-border pt-4">
+          <h3 class="font-semibold">Bank transfer balance</h3>
+          <template v-if="result.bank_balance.advance_remaining > 0 || result.bank_balance.balance_remaining > 0">
+            <dl class="grid grid-cols-2 gap-2">
+              <template v-if="result.bank_balance.advance_remaining > 0">
+                <dt>Advance still due</dt><dd>{{ formatPrice(result.bank_balance.advance_remaining) }}</dd>
+              </template>
+              <template v-if="result.bank_balance.balance_remaining > 0">
+                <dt>{{ result.bank_balance.advance_remaining > 0 ? 'Balance after advance' : 'Balance still due' }}</dt>
+                <dd>{{ formatPrice(result.bank_balance.balance_remaining) }}</dd>
+              </template>
+            </dl>
+            <p>Confirm the amount with the store before sending it. Use the same verified bank-transfer method and this order number as the reference.</p>
+          </template>
+          <p v-else>No bank-transfer balance due.</p>
+        </div>
         <ol v-if="orderStage >= 0" class="space-y-1 border-t border-brand-border pt-4" aria-label="Order progress">
           <li v-for="(stage, index) in stages" :key="stage.key" :aria-current="index === orderStage ? 'step' : undefined" :class="{ 'font-bold': index === orderStage }">
             <span aria-hidden="true">{{ index < orderStage ? '✓' : index === orderStage ? '●' : '○' }}</span>
@@ -142,8 +160,17 @@ onMounted(() => {
           <h3 class="mb-2 font-semibold">Order receipt</h3>
           <OrderReceiptActions v-if="receiptCode" :tracking-code="receiptCode" :load="loadReceipt" />
         </div>
+        <div v-if="result.order_status === 'delivered'" class="border-t border-brand-border pt-4">
+          <NuxtLink class="font-semibold underline" to="/policies/returns#request">Request a return</NuxtLink>
+        </div>
       </section>
-      <p>Lost your code? Signed-in customers can see order status in <NuxtLink class="underline" to="/account">their account</NuxtLink>.</p>
+
+      <section class="space-y-3 border-t border-brand-border pt-4">
+        <button type="button" class="font-semibold underline" aria-controls="tracking-code-recovery" :aria-expanded="recoveryOpen" @click="recoveryOpen = !recoveryOpen">Lost your private tracking code?</button>
+        <div id="tracking-code-recovery" :hidden="!recoveryOpen">
+          <TrackingCodeRecovery v-if="recoveryOpen" :order-number="orderNumber" />
+        </div>
+      </section>
     </div>
   </div>
 </template>

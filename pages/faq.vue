@@ -78,13 +78,13 @@ const faqs: FaqItem[] = [
     id: 'exchanges-1',
     category: 'exchanges',
     question: 'What is your exchange policy if a ready-to-wear size does not fit?',
-    answer: 'We provide a hassle-free 7-day size exchange window for unworn, unwashed Pret items with all tags and original luxury packaging intact. Use the support details for your order to ask about an exchange.',
+    answer: 'Submit a return or exchange request for your delivered order in Returns & Exchanges. Keep the item unworn and unwashed with its tags and packaging while the store reviews your request. Do not send it back before receiving verified instructions.',
   },
   {
     id: 'exchanges-2',
     category: 'exchanges',
     question: 'What happens if my custom stitched suit needs minor adjustments?',
-    answer: 'We stand firmly behind our atelier craftsmanship. If a bespoke tailored outfit requires minor alterations within 7 days of delivery, our master tailors will alter it free of charge.',
+    answer: 'If a custom garment differs from the agreed measurements or arrives with a problem, describe the issue in a request. Staff will review the original tailoring instructions and available options.',
   },
 ]
 

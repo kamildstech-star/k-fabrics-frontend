@@ -15,7 +15,10 @@ export interface CheckoutQuote {
   discount_amount: Money
   total_amount: Money
   advance_due: Money
+  balance_due: Money
   requires_deposit: boolean
+  has_tailoring: boolean
+  checkout_block_reason: string | null
   payment_options: PaymentOption[]
   items: Array<{ product_id: number; variant_id: number; quantity: number; unit_price: Money; total_price: Money }>
   standalone_stitchings: Array<{ stitching_service_id: number; stitching_fee: Money }>
@@ -27,9 +30,14 @@ export interface PlacedOrder {
   tracking_token?: string | null
   payment_method: string
   payment_status: string
+  order_status: string
+  cod_confirmation_expires_at?: string | null
   total_amount: Money
   advance_due?: Money | null
+  balance_due?: Money | null
   payment_instructions?: string | null
+  next_payment_amount?: Money | null
+  next_payment_type?: 'advance' | 'balance' | null
 }
 
 export interface OrderTracking {
@@ -40,6 +48,7 @@ export interface OrderTracking {
   tracking_number?: string | null
   created_at: string
   stitching_requests: Array<{ request_type: string; status: string }>
+  bank_balance?: { advance_remaining: number; balance_remaining: number } | null
 }
 
 export interface CheckoutCustomer {

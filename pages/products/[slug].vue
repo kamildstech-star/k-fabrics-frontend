@@ -4,6 +4,7 @@ import { useWishlistStore } from '~/stores/wishlist'
 import { useAuthStore } from '~/stores/auth'
 import { convertMeasurements, measurementPayload, requiredMeasurementLabels } from '~/utils/checkout'
 import { useRecentlyViewed } from '~/composables/useRecentlyViewed'
+import { productPageStatus, productSeo, seoJson } from '~/utils/seo'
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
@@ -59,15 +60,20 @@ const handleToggleWishlist = () => {
   wishlist.toggle(product.value as any)
 }
 
-// Fetch product data from API
+// Only a confirmed upstream absence is a 404. A failed request or malformed
+// success payload is a temporary problem and must not look like a removed item.
+const productApiUrl = computed(() => `${apiBase}/products/${encodeURIComponent(slug.value)}`)
 const { data: productResponse, pending, error, refresh } = await useFetch<any>(
-  () => `${apiBase}/products/${encodeURIComponent(slug.value)}`,
-  {
-    lazy: false,
-  }
+  productApiUrl, { lazy: false, retry: 0, timeout: 8_000 },
 )
-
-const product = computed(() => productResponse.value?.data || null)
+const httpStatus = computed(() => productPageStatus(productResponse.value?.data, error.value))
+const product = computed(() => !pending.value && httpStatus.value === 200 ? productResponse.value?.data : null)
+const notFound = computed(() => httpStatus.value === 404)
+if (import.meta.server && httpStatus.value !== 200) {
+  setResponseStatus(httpStatus.value)
+  useResponseHeader('Cache-Control').value = 'no-store'
+  if (httpStatus.value === 503) useResponseHeader('Retry-After').value = '60'
+}
 
 // State for active image in mobile gallery
 const activeImageIndex = ref(0)
@@ -205,7 +211,7 @@ const isSizeAvailable = (size: string) => {
   return Boolean(variant && variant.stock_quantity > 0)
 }
 
-// Custom measurements are only offered for an active Custom SKU.
+// Custom measurements require both an active SKU and verified payment availability.
 const customVariant = computed(() => {
   const variants = product.value?.variants?.filter((variant: { size: string; is_active: boolean }) => variant.size === 'Custom' && variant.is_active) || []
   if (!selectedColor.value) return variants.find((variant: { color?: string | null }) => !variant.color) || null
@@ -213,8 +219,9 @@ const customVariant = computed(() => {
     ?? variants.find((variant: { color?: string | null }) => !variant.color)
     ?? null
 })
-const activeVariant = computed(() => isCustomFit.value ? customVariant.value : getVariantForSize(selectedSize.value))
-watch(customVariant, variant => { if (!variant) isCustomFit.value = false })
+const customFitAvailable = computed(() => Boolean(customVariant.value && product.value?.tailoring_checkout_available === true))
+const activeVariant = computed(() => isCustomFit.value && customFitAvailable.value ? customVariant.value : getVariantForSize(selectedSize.value))
+watch(customFitAvailable, available => { if (!available) isCustomFit.value = false })
 
 // A colour change starts a new selection. Never silently substitute a different size.
 watch([slug, selectedColor], () => {
@@ -237,6 +244,7 @@ function focusSizeChoice() {
 }
 
 // Stock Alert Subscription
+const restockAlertsEnabled = computed(() => product.value?.restock_alerts_enabled === true)
 const stockAlertContact = ref('')
 const stockAlertLoading = ref(false)
 const stockAlertSuccess = ref(false)
@@ -247,7 +255,7 @@ watch(activeVariant, () => {
 })
 
 const handleStockAlert = async () => {
-  if (!stockAlertContact.value.trim() || !activeVariant.value) return
+  if (!restockAlertsEnabled.value || !stockAlertContact.value.trim() || !activeVariant.value || stockAlertLoading.value) return
   const variantId = activeVariant.value.id
   stockAlertLoading.value = true
   stockAlertError.value = ''
@@ -264,7 +272,7 @@ const handleStockAlert = async () => {
       stockAlertContact.value = ''
     }
   } catch (err: any) {
-    if (activeVariant.value?.id === variantId) stockAlertError.value = err?.data?.message || 'Unable to register stock alert. Please try again.'
+    if (activeVariant.value?.id === variantId) stockAlertError.value = err?.data?.errors?.product_variant_id?.[0] || 'Could not save your request. Check the address and try again.'
   } finally {
     stockAlertLoading.value = false
   }
@@ -276,17 +284,21 @@ const scrollToStockAlert = () => {
   el?.scrollIntoView({ block: 'center' })
 }
 
-// Reviews & Ratings
-const { data: reviewsResponse } = await useFetch<any>(
-  () => `${apiBase}/products/${slug.value}/reviews`
-)
+// Optional panels should not block or fetch for unavailable products.
+const [{ data: reviewsResponse }, { data: relatedResponse }] = await Promise.all([
+  useAsyncData(
+    () => `pdp-reviews:${slug.value}`,
+    () => product.value ? $fetch<any>(`${productApiUrl.value}/reviews`, { retry: 0, timeout: 3_000 }) : Promise.resolve({ data: [] }),
+    { watch: [product] },
+  ),
+  useAsyncData(
+    () => `pdp-related:${slug.value}`,
+    () => product.value ? $fetch<any>(`${productApiUrl.value}/related`, { retry: 0, timeout: 3_000 }) : Promise.resolve({ data: [] }),
+    { watch: [product] },
+  ),
+])
 const reviews = computed(() => reviewsResponse.value?.data || [])
 const reviewsMeta = computed(() => reviewsResponse.value?.meta || { average_rating: null, total_reviews: 0, distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } })
-
-// Related Products
-const { data: relatedResponse } = await useFetch<any>(
-  () => `${apiBase}/products/${slug.value}/related`
-)
 const relatedProducts = computed(() => relatedResponse.value?.data || [])
 
 // Record product view into Recently Viewed & fire ViewContent Pixel
@@ -313,20 +325,23 @@ watch(
   { immediate: true }
 )
 
-// Dynamic OpenGraph & Meta Tags for Social Previews (WhatsApp, Instagram, Search)
+// Use the catalog record rather than request parameters or invented fallback offers.
+const seo = computed(() => productSeo(product.value, config.public.siteUrl))
 useSeoMeta({
-  title: () => product.value ? `${product.value.name} | K. Fabrics Minimalist Luxury` : 'Luxury Ready-to-Wear | K. Fabrics',
-  description: () => product.value?.description?.slice(0, 160) || 'Pure organic lawn, raw silk co-ords, and bespoke custom stitching across Pakistan.',
-  ogTitle: () => product.value ? `${product.value.name} · Rs. ${Number(product.value.sale_price || product.value.base_price).toLocaleString('en-PK')} | K. Fabrics` : 'K. Fabrics Minimalist Luxury',
-  ogDescription: () => product.value?.description?.slice(0, 200) || 'Hand-tailored luxury ladies pret with optional custom fitting.',
-  ogImage: () => {
-    if (!product.value) return 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80'
-    const img = product.value.images?.find((i: any) => i.is_primary)?.image_url || product.value.images?.[0]?.image_url || product.value.primary_image
-    return img || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80'
-  },
-  ogType: 'website',
-  twitterCard: 'summary_large_image',
+  title: () => seo.value?.title ?? (notFound.value ? 'Item not found | K. Fabrics' : 'Item temporarily unavailable | K. Fabrics'),
+  description: () => seo.value?.description?.slice(0, 160),
+  ogTitle: () => seo.value?.title,
+  ogDescription: () => seo.value?.description?.slice(0, 200),
+  ogUrl: () => seo.value?.url,
+  ogImage: () => seo.value?.primaryImage,
+  ogType: () => seo.value ? 'website' : undefined,
+  twitterCard: () => seo.value?.primaryImage ? 'summary_large_image' : 'summary',
+  robots: () => notFound.value ? 'noindex, follow' : undefined,
 })
+useHead(() => seo.value ? {
+  link: [{ rel: 'canonical', href: seo.value.url }],
+  script: [{ key: 'product-data', type: 'application/ld+json', innerHTML: seoJson(seo.value.schema) }],
+} : {})
 
 // Review Form & Lightbox State
 const writeReviewOpen = ref(false)
@@ -454,6 +469,10 @@ const filteredReviews = computed(() => {
 
 // Add to Cart
 const handleAddToCart = () => {
+  if (isCustomFit.value && !customFitAvailable.value) {
+    selectionError.value = 'Custom fitting is unavailable online right now.'
+    return
+  }
   if (!selectedSize.value && !isCustomFit.value) {
     sizeError.value = true
     focusSizeChoice()
@@ -517,15 +536,15 @@ const productWhatsApp = computed(() => product.value
     </div>
 
     <!-- Error / Not Found State -->
-    <div v-else-if="error || !product" class="max-w-xl mx-auto text-center py-24 px-4">
+    <div v-else-if="!product" class="max-w-xl mx-auto text-center py-24 px-4">
       <div class="w-16 h-16 mx-auto text-brand-muted/40 mb-4">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-full h-full">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
       </div>
-      <h1 class="font-serif text-2xl font-bold text-brand-charcoal mb-2">{{ error && error.statusCode !== 404 ? 'Could not load this item' : 'Item not found' }}</h1>
-      <p class="text-sm text-brand-muted mb-6">{{ error && error.statusCode !== 404 ? 'Try again in a moment.' : 'This item may no longer be available.' }}</p>
-      <button v-if="error && error.statusCode !== 404" type="button" class="inline-block px-5 py-3 mr-3 border border-brand-charcoal" @click="refresh()">Try again</button>
+      <h1 class="font-serif text-2xl font-bold text-brand-charcoal mb-2">{{ notFound ? 'Item not found' : 'Could not load this item' }}</h1>
+      <p class="text-sm text-brand-muted mb-6">{{ notFound ? 'This item may no longer be available.' : 'Try again in a moment.' }}</p>
+      <button v-if="!notFound" type="button" class="inline-block px-5 py-3 mr-3 border border-brand-charcoal" @click="refresh()">Try again</button>
       <NuxtLink
         to="/shop"
         class="inline-block px-8 py-3.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury hover:bg-brand-gold transition-colors"
@@ -737,14 +756,15 @@ const productWhatsApp = computed(() => product.value
                 </button>
               </div>
 
-              <p v-if="!colorSizes.length && !customVariant" role="status" class="text-sm">This item is currently unavailable.</p>
+              <p v-if="!colorSizes.length && !customFitAvailable" role="status" class="text-sm">This item is currently unavailable.</p>
               <p v-if="sizeError" role="alert" class="text-sm text-red-800 font-medium">
-                {{ customVariant ? 'Select a size or choose Custom Fit.' : 'Select a size before adding to bag.' }}
+                {{ customFitAvailable ? 'Select a size or choose Custom Fit.' : 'Select a size before adding to bag.' }}
               </p>
             </div>
 
             <!-- Custom Fit Atelier Toggle -->
-            <div v-if="customVariant" class="border border-brand-border p-4 bg-brand-cream/40 transition-colors">
+            <p v-if="customVariant && !customFitAvailable" class="border border-brand-border p-4 bg-brand-cream/40 text-sm">Custom fitting is paused until verified bank-transfer payment is available. You can still choose an available ready-to-wear size.</p>
+            <div v-if="customFitAvailable" class="border border-brand-border p-4 bg-brand-cream/40 transition-colors">
               <div class="flex items-start justify-between">
                 <div class="flex items-start space-x-3">
                   <input
@@ -989,35 +1009,36 @@ const productWhatsApp = computed(() => product.value
                     Size {{ selectedSize }} is Currently Sold Out
                   </p>
                 </div>
-                <p class="text-[11px] text-brand-muted leading-relaxed">
-                  Leave an email address or phone number to request a restock notification.
+                <p v-if="!restockAlertsEnabled" class="text-sm text-brand-muted">Choose another size or <NuxtLink to="/shop" class="underline">browse similar pieces</NuxtLink>.</p>
+                <p v-else class="text-sm text-brand-muted leading-relaxed">
+                  Leave your email so the store team can contact you about this size if it returns. This does not reserve stock.
                 </p>
 
-                <div v-if="stockAlertSuccess" class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center space-x-2">
+                <div v-if="restockAlertsEnabled && stockAlertSuccess" role="status" class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center space-x-2">
                   <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                   </svg>
-                  <span>Restock notification requested for size {{ selectedSize }}.</span>
+                  <span>Request saved for the store team.</span>
                 </div>
 
-                <form v-else class="flex flex-col sm:flex-row gap-2" @submit.prevent="handleStockAlert">
+                <form v-else-if="restockAlertsEnabled" class="flex flex-col sm:flex-row gap-2" @submit.prevent="handleStockAlert">
                   <input
                     v-model="stockAlertContact"
-                    aria-label="Email address or phone number for the notification"
-                    type="text"
-                    placeholder="WhatsApp (+923...) or Email address"
+                    aria-label="Email address for restock"
+                    type="email" autocomplete="email" maxlength="254"
+                    placeholder="Email address"
                     required
-                    class="flex-1 bg-white border border-brand-border px-3 py-2.5 text-xs text-brand-charcoal placeholder-brand-muted focus:outline-none focus:border-brand-gold"
+                    class="flex-1 min-w-0 bg-white border border-brand-border px-3 py-2.5 text-xs text-brand-charcoal placeholder-brand-muted focus:outline-none focus:border-brand-gold"
                   >
                   <button
                     type="submit"
                     :disabled="stockAlertLoading"
                     class="px-5 py-2.5 bg-brand-charcoal hover:bg-brand-gold text-white text-xs uppercase tracking-luxury font-medium transition-colors disabled:opacity-50 shrink-0"
                   >
-                    {{ stockAlertLoading ? 'Subscribing...' : 'Notify Me' }}
+                    {{ stockAlertLoading ? 'Saving…' : 'Request restock email' }}
                   </button>
                 </form>
-                <p v-if="stockAlertError" class="text-[11px] text-red-600">
+                <p v-if="restockAlertsEnabled && stockAlertError" role="alert" class="text-sm text-red-800">
                   {{ stockAlertError }}
                 </p>
               </div>
@@ -1067,7 +1088,7 @@ const productWhatsApp = computed(() => product.value
 
             <div class="flex flex-wrap gap-x-5 gap-y-2 text-sm">
               <NuxtLink to="/policies/shipping" class="underline underline-offset-4">Delivery estimates</NuxtLink>
-              <NuxtLink to="/policies/returns" class="underline underline-offset-4">{{ isCustomFit ? 'Custom order policy' : '7-day ready-to-wear exchanges' }}</NuxtLink>
+              <NuxtLink to="/policies/returns" class="underline underline-offset-4">{{ isCustomFit ? 'Custom order policy' : 'Ready-to-wear returns and exchanges' }}</NuxtLink>
             </div>
 
             <!-- Collapsible Luxury Accordions -->
@@ -1504,11 +1525,13 @@ const productWhatsApp = computed(() => product.value
 
       <div v-if="isOutOfStock" class="flex-1">
         <button
+          v-if="restockAlertsEnabled"
           class="w-full py-3 bg-brand-gold hover:bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium transition-colors"
           @click="scrollToStockAlert"
         >
-          Notify Me
+          Request restock
         </button>
+        <button v-else type="button" class="w-full py-3 border border-brand-charcoal text-xs uppercase tracking-luxury font-medium" @click="focusSizeChoice">See other sizes</button>
       </div>
       <button
         v-else

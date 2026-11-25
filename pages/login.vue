@@ -4,6 +4,8 @@ import { useAuthStore } from '~/stores/auth'
 const auth = useAuthStore()
 const router = useRouter()
 
+useSeoMeta({ title: 'Sign in | K. Fabrics', robots: 'noindex, nofollow' })
+
 const form = reactive({
   email: '',
   password: '',
@@ -80,6 +82,7 @@ const handleLogin = async () => {
             <label for="login-password" class="text-[10px] uppercase tracking-luxury text-brand-charcoal font-semibold block">
               Password *
             </label>
+            <NuxtLink to="/forgot-password" class="text-sm font-semibold underline">Forgot password?</NuxtLink>
           </div>
           <input
             id="login-password"

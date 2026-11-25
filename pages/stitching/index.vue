@@ -49,12 +49,16 @@ const applySavedProfile = (profileId: number) => {
 type StitchingService = { id: number; name: string; description: string; base_price: number; estimated_days: number }
 
 // Fetch active stitching services from backend API
-const { data: servicesResponse, pending: servicesPending } = await useFetch<{ data: StitchingService[] }>(
+const { data: servicesResponse, pending: servicesPending, error: servicesError } = await useFetch<{
+  data: StitchingService[]
+  meta?: { tailoring_checkout_available?: boolean }
+}>(
   `${apiBase}/stitching-services`,
   { lazy: false }
 )
 
 const services = computed(() => servicesResponse.value?.data || [])
+const tailoringAvailable = computed(() => servicesResponse.value?.meta?.tailoring_checkout_available === true)
 
 // Wizard Step (1, 2, or 3)
 const currentStep = ref(1)
@@ -206,6 +210,7 @@ const checkMeasurements = () => {
 }
 
 const goToStep = (step: number) => {
+  if (!tailoringAvailable.value) return
   if (step === 2 && !step1Valid.value) return
   if (step === 3 && !checkMeasurements()) return
   currentStep.value = step
@@ -251,7 +256,7 @@ const formatPrice = (val: number) => 'Rs. ' + Number(val).toLocaleString('en-PK'
 
 // Finish Booking & Add to Bag
 const finalizeBooking = (proceedToCheckout = false) => {
-  if (!selectedServiceId.value || !checkMeasurements()) return
+  if (!tailoringAvailable.value || !selectedServiceId.value || !checkMeasurements()) return
 
   const measurementsPayload = measurementMode.value === 'manual' ? measurementPayload(manualMeasurements) : null
 
@@ -291,12 +296,21 @@ const finalizeBooking = (proceedToCheckout = false) => {
         <p class="text-xs text-brand-muted mt-2 font-light leading-relaxed">
           Book tailoring for your own unstitched fabric. Send it by courier after the atelier confirms where and when to ship it.
         </p>
-        <p class="mt-3 text-xs leading-relaxed text-brand-charcoal">
+        <p v-if="tailoringAvailable" class="mt-3 text-xs leading-relaxed text-brand-charcoal">
           To protect your privacy, unfinished measurements and reference photos stay in this tab. Finish checkout before refreshing or closing it.
           Signed-in customers can reload a measurement profile they have saved in their account.
         </p>
       </div>
 
+      <p v-if="servicesPending" role="status" class="text-center">Checking booking availability…</p>
+      <section v-else-if="servicesError || !tailoringAvailable || !services.length" aria-labelledby="booking-unavailable" class="border border-brand-border bg-brand-cream/40 p-6 space-y-4 text-center">
+        <h2 id="booking-unavailable" class="font-serif text-xl font-semibold">Online tailoring bookings are unavailable</h2>
+        <p v-if="servicesError">We couldn’t check availability right now. Please try again later.</p>
+        <p v-else-if="!tailoringAvailable">Bookings are paused until verified bank-transfer payment is available. Please don’t send fabric or measurements yet.</p>
+        <p v-else>No tailoring packages are accepting bookings at the moment.</p>
+        <NuxtLink to="/shop" class="inline-block font-semibold underline underline-offset-4">Shop ready-to-wear</NuxtLink>
+      </section>
+      <template v-else>
       <!-- 3-Step Luxury Progress Stepper -->
       <div class="mb-12">
         <div class="flex items-center justify-between max-w-xl mx-auto mb-3">
@@ -971,6 +985,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
           </div>
         </div>
       </div>
+      </template>
     </div>
   </div>
 </template>

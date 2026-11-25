@@ -136,7 +136,7 @@ useSeoMeta({
           <p>
             The courier rider will attempt delivery up to two times. As per standard logistics security guidelines in Pakistan, 
             parcels cannot be opened before payment is handed over to the courier representative. 
-            However, our <NuxtLink to="/policies/returns" class="text-brand-gold underline">7-Day Exchange Policy</NuxtLink> covers you completely once unboxed.
+            However, you can <NuxtLink to="/policies/returns" class="text-brand-gold underline">submit a request</NuxtLink> if something is wrong after opening the parcel.
           </p>
         </section>
       </div>

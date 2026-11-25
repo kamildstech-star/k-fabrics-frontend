@@ -37,7 +37,20 @@ let cartTimer: ReturnType<typeof setTimeout> | undefined
 
 const paymentOption = computed(() => quote.value?.payment_options.find(option => option.id === customer.payment_method))
 const requiresOtp = computed(() => paymentOption.value?.requires_otp === true)
+const tailoringBlocked = computed(() => Boolean(quote.value?.has_tailoring && quote.value.checkout_block_reason))
 const pendingOrder = ref<PlacedOrder | null>(null)
+const orderInactive = computed(() => ['cancelled', 'returned'].includes(pendingOrder.value?.order_status ?? ''))
+const paymentSettled = computed(() => ['paid', 'refunded'].includes(pendingOrder.value?.payment_status ?? ''))
+const codConfirmationDeadline = computed(() => {
+  const value = pendingOrder.value?.cod_confirmation_expires_at
+  if (!value || pendingOrder.value?.order_status !== 'pending') return ''
+  const deadline = new Date(value)
+  return Number.isNaN(deadline.getTime()) ? '' : new Intl.DateTimeFormat('en-PK', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Asia/Karachi',
+  }).format(deadline)
+})
 const submitError = ref('')
 const submitting = ref(false)
 const orderTitle = ref<HTMLElement | null>(null)
@@ -246,9 +259,14 @@ const placeOrder = async () => {
       order_number: received.order_number,
       payment_method: received.payment_method,
       payment_status: received.payment_status,
+      order_status: received.order_status,
+      cod_confirmation_expires_at: received.cod_confirmation_expires_at,
       total_amount: received.total_amount,
       advance_due: received.advance_due,
+      balance_due: received.balance_due,
       payment_instructions: received.payment_instructions,
+      next_payment_amount: received.next_payment_amount,
+      next_payment_type: received.next_payment_type,
       tracking_token: received.tracking_token,
       receipt: received.receipt,
     }
@@ -354,21 +372,28 @@ onBeforeUnmount(() => {
 
       <section v-if="pendingOrder" class="max-w-2xl mx-auto border border-brand-border bg-brand-cream/40 p-6 sm:p-12 space-y-6">
         <h1 ref="orderTitle" tabindex="-1" class="font-serif text-3xl font-bold">Order received</h1>
-        <p>Your order has been submitted. Check its status before making any additional payment.</p>
+        <p v-if="orderInactive">This order is no longer active. Do not send a payment.</p>
+        <p v-else-if="pendingOrder.payment_status === 'paid'">Your payment has been recorded.</p>
+        <p v-else-if="pendingOrder.payment_status === 'refunded'">A refund has been recorded. Check the order status before taking any further action.</p>
+        <p v-else>Your order has been submitted. Save your order number and check its status before making any additional payment.</p>
         <dl class="grid grid-cols-2 gap-3 border border-brand-border bg-white p-4">
-          <dt>Order number</dt><dd class="font-bold">{{ pendingOrder.order_number }}</dd>
+          <dt>Order number</dt><dd class="font-bold break-all">{{ pendingOrder.order_number }}</dd>
           <dt>Total</dt><dd class="font-bold">{{ formatPrice(pendingOrder.total_amount) }}</dd>
+          <template v-if="Number(pendingOrder.advance_due) > 0">
+            <dt>Tailoring advance</dt><dd class="font-semibold">{{ formatPrice(pendingOrder.advance_due!) }}</dd>
+            <dt>Balance after advance</dt><dd class="font-semibold">{{ formatPrice(pendingOrder.balance_due ?? 0) }}</dd>
+          </template>
         </dl>
-        <div v-if="Number(pendingOrder.advance_due) > 0" class="border border-brand-border bg-white p-4 space-y-2">
-          <p class="font-semibold">Tailoring advance: {{ formatPrice(pendingOrder.advance_due!) }}</p>
-          <p>Your tailoring work starts after the store verifies the deposit.</p>
-        </div>
-        <div v-if="pendingOrder.payment_instructions" class="border border-brand-border bg-white p-4">
-          <h2 class="font-semibold">Payment instructions</h2>
+        <div v-if="pendingOrder.payment_instructions && pendingOrder.next_payment_amount != null" class="border border-brand-border bg-white p-4 space-y-2">
+          <h2 class="font-semibold">Verified bank transfer instructions</h2>
+          <p><strong>{{ pendingOrder.next_payment_type === 'advance' ? 'Advance to send now' : 'Amount to send now' }}: {{ formatPrice(pendingOrder.next_payment_amount) }}</strong></p>
           <p class="whitespace-pre-wrap break-words">{{ pendingOrder.payment_instructions }}</p>
+          <p>Use your order number as the payment reference if your bank allows it.</p>
+          <p v-if="pendingOrder.next_payment_type === 'advance'">The store must verify the advance before tailoring begins. Before sending the balance, check order tracking and confirm the amount with the store. Use the same verified bank transfer method and order reference. The balance must be paid before dispatch.</p>
         </div>
-        <p v-else-if="Number(pendingOrder.advance_due) > 0">Wait for the store to provide verified deposit instructions. Do not transfer funds using unofficial payment details.</p>
-        <p v-else-if="pendingOrder.payment_method === 'cod'">Cash on delivery. The store may contact you to confirm your order before dispatch.</p>
+        <p v-else-if="!orderInactive && !paymentSettled && Number(pendingOrder.total_amount) > 0 && pendingOrder.payment_method === 'bank_transfer'">Verified transfer instructions are unavailable. Contact the store about this order before sending payment.</p>
+        <p v-else-if="!orderInactive && !paymentSettled && pendingOrder.payment_method === 'cod' && Number(pendingOrder.advance_due) === 0">Cash on delivery. The store may contact you to confirm your order before dispatch.</p>
+        <p v-if="codConfirmationDeadline">If not confirmed by {{ codConfirmationDeadline }} Pakistan time, your COD order expires and the reserved stock is released.</p>
         <div v-if="pendingOrder.tracking_token" class="space-y-2">
           <label for="order-tracking-code" class="block font-semibold">Private tracking code</label>
           <p id="save-tracking-note">Save this code with your order number. Keep it private.</p>
@@ -397,7 +422,10 @@ onBeforeUnmount(() => {
                   <dt>Order total</dt><dd>{{ formatPrice(quote.total_amount) }}</dd>
                 </div>
                 <div v-if="quote.requires_deposit" class="flex flex-wrap justify-between gap-x-4 gap-y-1">
-                  <dt>Tailoring advance</dt><dd class="font-semibold">{{ formatPrice(quote.advance_due) }}</dd>
+                  <dt>Advance after placing</dt><dd class="font-semibold">{{ formatPrice(quote.advance_due) }}</dd>
+                </div>
+                <div v-if="quote.requires_deposit" class="flex flex-wrap justify-between gap-x-4 gap-y-1">
+                  <dt>Balance before dispatch</dt><dd class="font-semibold">{{ formatPrice(quote.balance_due) }}</dd>
                 </div>
               </dl>
               <p v-else class="text-sm">{{ quoteError ? 'Order total unavailable' : 'Checking your order total…' }}</p>
@@ -422,8 +450,8 @@ onBeforeUnmount(() => {
               <input v-model="customer.payment_method" name="payment_method" type="radio" :value="option.id" class="accent-brand-charcoal">
               <span>{{ option.label }}</span>
             </label>
-            <p v-if="quote && !quote.payment_options.length" role="alert">No payment method is available for this bag.</p>
-            <p v-if="quote?.requires_deposit" class="text-sm bg-brand-cream border border-brand-border p-4">Advance due: <strong>{{ formatPrice(quote.advance_due) }}</strong>. Tailoring begins after the store verifies the deposit.</p>
+            <p v-if="quote && !quote.payment_options.length" role="alert" class="border border-brand-border bg-brand-cream p-4">{{ quote.checkout_block_reason || 'No payment method is available for this bag.' }}</p>
+            <p v-else-if="quote?.requires_deposit" class="text-sm bg-brand-cream border border-brand-border p-4">For this tailoring order, both payments are by bank transfer. You’ll see the verified instructions after placing the order. The store verifies the advance before starting work, and the balance must be paid before dispatch.</p>
           </fieldset>
 
           <section v-if="requiresOtp" aria-labelledby="otp-heading" class="border border-brand-border bg-brand-cream p-4 space-y-3">
@@ -450,7 +478,7 @@ onBeforeUnmount(() => {
                 {{ item.name }}<span v-if="item.size"> · {{ item.size }}</span> × {{ item.quantity }}
               </div>
               <span v-if="quotedLines.has(item.id)" class="shrink-0">{{ formatPrice(quotedLines.get(item.id)!) }}</span>
-              <button v-if="quoteError" type="button" :aria-label="`Remove ${item.name}`" class="underline text-red-800 shrink-0" :disabled="submitting || retryWithSameDetails" @click="cart.removeItem(item.id)">Remove</button>
+              <button v-if="quoteError || (tailoringBlocked && (item.type === 'stitching' || item.customFitting))" type="button" :aria-label="`Remove ${item.name}`" class="underline text-red-800 shrink-0" :disabled="submitting || retryWithSameDetails" @click="cart.removeItem(item.id)">Remove</button>
             </li>
           </ul>
 
@@ -479,6 +507,8 @@ onBeforeUnmount(() => {
             <div class="flex justify-between"><dt>Shipping</dt><dd>{{ Number(quote.shipping_fee) === 0 ? 'Free' : formatPrice(quote.shipping_fee) }}</dd></div>
             <div v-if="Number(quote.discount_amount) > 0" class="flex justify-between"><dt>Discount</dt><dd>−{{ formatPrice(quote.discount_amount) }}</dd></div>
             <div class="flex justify-between font-bold text-lg"><dt>Total</dt><dd>{{ formatPrice(quote.total_amount) }}</dd></div>
+            <div v-if="quote.requires_deposit" class="flex flex-wrap justify-between gap-x-4 gap-y-1"><dt>Advance after placing</dt><dd class="font-semibold">{{ formatPrice(quote.advance_due) }}</dd></div>
+            <div v-if="quote.requires_deposit" class="flex flex-wrap justify-between gap-x-4 gap-y-1"><dt>Balance before dispatch</dt><dd class="font-semibold">{{ formatPrice(quote.balance_due) }}</dd></div>
           </dl>
           <p v-if="submitError" role="alert" class="text-red-800 text-sm">{{ submitError }}</p>
           <button type="submit" :disabled="submitDisabled" class="w-full primary-action">

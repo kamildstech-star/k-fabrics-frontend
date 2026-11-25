@@ -1,34 +1,23 @@
-type SitemapEntry = {
-  loc: string
-  priority: string
-  changefreq: string
-  image?: string
-  title?: string
+import { collectionPath, indexableStaticPaths, productPath, storefrontMediaUrl, storefrontUrl } from '~/utils/seo'
+
+type SitemapEntry = { loc: string; image?: string }
+type CatalogProduct = {
+  slug: string
+  primary_image?: string | null
+  images?: { image_url: string }[]
+  category?: { slug: string }
 }
+type CatalogCategory = { slug: string; children?: CatalogCategory[] }
 
 export default defineEventHandler(async (event) => {
-  const config = useRuntimeConfig()
-  const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
-  const siteUrl = (config.public.siteUrl as string) || 'https://kfabrics.com'
-
-  const staticRoutes: SitemapEntry[] = [
-    { loc: '/', priority: '1.0', changefreq: 'daily' },
-    { loc: '/shop', priority: '0.9', changefreq: 'daily' },
-    { loc: '/stitching', priority: '0.9', changefreq: 'weekly' },
-    { loc: '/about', priority: '0.7', changefreq: 'monthly' },
-    { loc: '/faq', priority: '0.7', changefreq: 'weekly' },
-    { loc: '/policies/returns', priority: '0.6', changefreq: 'monthly' },
-    { loc: '/policies/shipping', priority: '0.6', changefreq: 'monthly' },
-    { loc: '/policies/privacy', priority: '0.5', changefreq: 'monthly' },
-  ]
-
-  const productRoutes: SitemapEntry[] = []
-  const categoryRoutes: SitemapEntry[] = []
+  const { public: { apiBase, siteUrl } } = useRuntimeConfig()
+  const products = new Map<string, SitemapEntry>()
+  const populated = new Set<string>()
+  const collections = new Set<string>()
   const requestDeadline = AbortSignal.timeout(5000)
   let complete = true
 
   try {
-    type CatalogProduct = { slug: string, name: string, primary_image?: string | null, images?: { image_url: string }[] }
     let page = 1
     let lastPage = 1
     do {
@@ -36,13 +25,14 @@ export default defineEventHandler(async (event) => {
         `${apiBase}/products`,
         { params: { page, per_page: 100 }, signal: requestDeadline, retry: 0 },
       )
-      for (const p of response.data || []) {
-        productRoutes.push({
-          loc: `/products/${encodeURIComponent(p.slug)}`,
-          priority: '0.9',
-          changefreq: 'daily',
-          image: sitemapImage(p.primary_image || p.images?.[0]?.image_url, siteUrl),
-          title: p.name,
+      if (!Array.isArray(response.data)) throw new Error('Unexpected catalog response')
+      for (const product of response.data) {
+        const loc = productPath(product.slug)
+        if (!loc) continue
+        if (product.category?.slug) populated.add(product.category.slug)
+        products.set(loc, {
+          loc,
+          image: storefrontMediaUrl(product.primary_image || product.images?.[0]?.image_url, siteUrl),
         })
       }
       const reportedLastPage = Number(response.meta?.last_page ?? 1)
@@ -50,65 +40,49 @@ export default defineEventHandler(async (event) => {
     } while (++page <= lastPage)
   } catch (e) {
     complete = false
-    console.warn('Sitemap: Failed to fetch products for sitemap', e)
+    console.warn('Sitemap: Failed to fetch catalog', e)
   }
 
   try {
-    const result = await $fetch<{ data: { slug: string }[] }>(`${apiBase}/categories`, {
-      signal: requestDeadline,
-      retry: 0,
+    const result = await $fetch<{ data: CatalogCategory[] }>(`${apiBase}/categories`, {
+      signal: requestDeadline, retry: 0,
     })
-    for (const category of result.data || []) {
-      categoryRoutes.push({
-        loc: `/shop?category=${encodeURIComponent(category.slug)}`,
-        priority: '0.8',
-        changefreq: 'weekly',
-      })
+    if (!Array.isArray(result.data)) throw new Error('Unexpected category response')
+    for (const category of result.data) {
+      // The catalog includes each directly nested category in its parent
+      // route, so both useful shelves are legitimate canonical destinations.
+      const populatedChildren = (Array.isArray(category.children) ? category.children : [])
+        .filter(child => populated.has(child.slug))
+      if (populated.has(category.slug) || populatedChildren.length) collections.add(collectionPath(category.slug))
+      for (const child of populatedChildren) collections.add(collectionPath(child.slug))
     }
   } catch (e) {
     complete = false
-    console.warn('Sitemap: Failed to fetch categories for sitemap', e)
+    console.warn('Sitemap: Failed to fetch categories', e)
   }
 
-  const allUrls = [...staticRoutes, ...categoryRoutes, ...productRoutes].slice(0, 50_000)
-
-  const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-${allUrls
-  .map((item) => {
-    const fullLoc = `${siteUrl.replace(/\/$/, '')}${item.loc}`
-    let xml = `  <url>\n    <loc>${escapeXml(fullLoc)}</loc>\n    <changefreq>${item.changefreq}</changefreq>\n    <priority>${item.priority}</priority>`
-    if (item.image) {
-      xml += `\n    <image:image>\n      <image:loc>${escapeXml(item.image)}</image:loc>\n      <image:title>${escapeXml(item.title || '')}</image:title>\n    </image:image>`
-    }
-    xml += `\n  </url>`
-    return xml
+  const routes = [...indexableStaticPaths, '/shop', ...collections]
+  const entries: SitemapEntry[] = [...routes.map(loc => ({ loc })), ...products.values()]
+  const urls = entries.slice(0, 50_000).map(({ loc, image }) => {
+    const imageXml = image ? `<image:image><image:loc>${escapeXml(image)}</image:loc></image:image>` : ''
+    return `  <url><loc>${escapeXml(storefrontUrl(siteUrl, loc))}</loc>${imageXml}</url>`
   })
-  .join('\n')}
-</urlset>`
-
   setHeader(event, 'Content-Type', 'application/xml; charset=utf-8')
   setHeader(event, 'Cache-Control', complete ? 'max-age=3600, s-maxage=86400' : 'max-age=60, s-maxage=60')
-  return sitemapXml
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+${urls.join('\n')}
+</urlset>`
 })
 
-function sitemapImage(raw: string | undefined, siteUrl: string): string | undefined {
-  if (!raw) return
-  try {
-    const url = new URL(raw, siteUrl)
-    if (['https:', 'http:'].includes(url.protocol) && !url.username && !url.password) return url.href
-  } catch {
-    // Ignore non-URL values in the optional image field.
-  }
-}
-
-function escapeXml(unsafe: string): string {
+function escapeXml(unsafe: string) {
   return unsafe.replace(/[<>&'"]/g, (c) => {
     switch (c) {
       case '<': return '&lt;'
       case '>': return '&gt;'
       case '&': return '&amp;'
-      case '\'': return '&apos;'
+      case "'": return '&apos;'
       case '"': return '&quot;'
       default: return c
     }

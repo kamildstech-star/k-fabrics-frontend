@@ -26,26 +26,46 @@ const product = {
   variants: [{ id: 1, size: 'S', is_active: true, stock_quantity: 3 }],
   category: { id: 1, name: 'Smoke Collection', slug: 'smoke-collection' },
 }
-const secondProduct = { ...product, id: 2, slug: 'second-page-product' }
+const secondProduct = { ...product, id: 2, slug: 'second-page-product', primary_image: '/favicon.ico' }
+const realPhoto = 'https://images.example.test/lawn.jpg'
+const productDetail = { ...product, primary_image: realPhoto, images: [{ id: 1, image_url: realPhoto, is_primary: true }] }
+const parentCollection = { id: 22, name: 'Summer', slug: 'summer', children: [product.category] }
+const emptyCollection = { id: 23, name: 'Empty shelf', slug: 'empty-shelf' }
 const endpoints = {
   'GET /api/v1/products': { data: [product], meta: { current_page: 1, last_page: 1, total: 1 } },
-  'GET /api/v1/categories': { data: [product.category] },
+  'GET /api/v1/categories': { data: [parentCollection, emptyCollection] },
   'GET /api/v1/products/facets': {
     data: { sizes: [{ id: 's', label: 'S' }], fabrics: [], pieces: [], colors: [] },
   },
   'GET /api/v1/stitching-services': { data: [] },
-  [`GET /api/v1/products/${product.slug}`]: { data: product },
+  [`GET /api/v1/products/${product.slug}`]: { data: productDetail },
+  'GET /api/v1/products/malformed-pdp': { data: null },
   [`GET /api/v1/products/${product.slug}/related`]: { data: [] },
   [`GET /api/v1/products/${product.slug}/reviews`]: { data: [], meta: { average_rating: 0, total_reviews: 0 } },
 }
 
 const api = createServer((request, response) => {
   const url = new URL(request.url, `http://${host}`)
-  const catalog = url.pathname === '/api/v1/products' && url.searchParams.get('per_page') === '100'
-  const body = catalog
-    ? { data: [url.searchParams.get('page') === '2' ? secondProduct : product], meta: { last_page: 2 } }
-    : endpoints[`${request.method} ${url.pathname}`]
-  response.writeHead(body ? 200 : 404, { 'content-type': 'application/json' })
+  const catalog = url.pathname === '/api/v1/products'
+  const page = Number(url.searchParams.get('page') || '1')
+  let body = endpoints[`${request.method} ${url.pathname}`]
+  let status = body ? 200 : 404
+  if (url.pathname === '/api/v1/products/unavailable-pdp' || (catalog && url.searchParams.get('search') === 'offline')) {
+    status = 500
+    body = { message: 'Simulated upstream error' }
+  } else if (catalog && url.searchParams.get('min_price') === 'not-a-price') {
+    status = 422
+    body = { message: 'Invalid price' }
+  } else if (catalog) {
+    const empty = url.searchParams.get('size') === 'absent'
+      || url.searchParams.get('category') === emptyCollection.slug
+    status = 200
+    body = {
+      data: empty || page > 2 ? [] : [page === 2 ? secondProduct : product],
+      meta: { current_page: page, last_page: empty ? 1 : 2, total: empty ? 0 : 2 },
+    }
+  }
+  response.writeHead(status, { 'content-type': 'application/json' })
   response.end(JSON.stringify(body || { message: 'Mock route not found' }))
 })
 let storefront
@@ -110,19 +130,94 @@ try {
       assert.ok((await optimized.arrayBuffer()).byteLength > 100)
     }
   }
+  const canonicalFrom = html => html.match(/<link[^>]*rel="canonical"[^>]*href="([^"]+)"/)?.[1]?.replaceAll('&amp;', '&')
+  const productPath = `/products/${product.slug}`
+  const pdp = await get(`${productPath}?utm_source=newsletter`)
+  assert.equal(pdp.status, 200)
+  const pdpHtml = await pdp.text()
+  assert.equal(canonicalFrom(pdpHtml), `${url}${productPath}`)
+  const json = pdpHtml.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/)?.[1]
+  assert.ok(json, 'SSR embeds Product JSON-LD')
+  const productData = JSON.parse(json)
+  assert.equal(productData['@type'], 'Product')
+  assert.equal(productData.name, product.name)
+  assert.deepEqual(productData.image, [realPhoto])
+  assert.equal(productData.offers.price, '3999.00')
+  assert.equal(productData.offers.priceCurrency, 'PKR')
+  assert.equal(productData.offers.availability, 'https://schema.org/InStock')
+
+  for (const [path, expectedStatus, message] of [
+    ['/products/missing-pdp', 404, 'Item not found'],
+    ['/products/unavailable-pdp', 503, 'Could not load this item'],
+    ['/products/malformed-pdp', 503, 'Could not load this item'],
+  ]) {
+    const response = await get(path)
+    assert.equal(response.status, expectedStatus, path)
+    if (expectedStatus === 503) assert.equal(response.headers.get('retry-after'), '60')
+    assert.equal(response.headers.get('cache-control'), 'no-store')
+    const html = await response.text()
+    assert.ok(html.includes(message), path)
+    assert.equal(canonicalFrom(html), undefined)
+    assert.ok(!html.includes('application/ld+json'), path)
+  }
+
+  for (const [path, target] of [
+    ['/?utm_source=example', '/'],
+    ['/shop?sort=newest&utm_source=example&page=1', '/shop'],
+    ['/shop?category=smoke-collection&page=1', '/shop?category=smoke-collection'],
+    ['/shop?category=smoke-collection&page=2', '/shop?category=smoke-collection&page=2'],
+  ]) {
+    const response = await get(path)
+    assert.equal(response.status, 200, path)
+    const html = await response.text()
+    assert.equal(canonicalFrom(html), `${url}${target}`, path)
+    assert.doesNotMatch(html, /name="robots"[^>]*content="noindex/, path)
+  }
+  const collection = await (await get('/shop?category=smoke-collection')).text()
+  assert.match(collection, /href="\/shop\?category=smoke-collection(?:&amp;|&)page=2"[^>]*aria-label="Next product page"/)
+
+  for (const [path, status] of [
+    ['/shop?search=lawn', 200],
+    ['/shop?sort=price_asc', 200],
+    ['/shop?size=s', 200],
+    ['/shop?size=absent', 404],
+    ['/shop?category=empty-shelf', 404],
+    ['/shop?page=99', 404],
+    ['/shop?min_price=not-a-price', 400],
+  ]) {
+    const response = await get(path)
+    assert.equal(response.status, status, path)
+    const html = await response.text()
+    assert.match(html, /name="robots"[^>]*content="noindex, follow"/, path)
+    assert.equal(canonicalFrom(html), undefined, path)
+  }
+  const catalogError = await get('/shop?search=offline')
+  assert.equal(catalogError.status, 503, 'Catalog downtime is not an empty result')
+  assert.equal(catalogError.headers.get('retry-after'), '60')
+
+  const robots = await get('/robots.txt')
+  assert.equal(robots.status, 200)
+  const robotsText = await robots.text()
+  assert.ok(robotsText.includes(`Sitemap: ${url}/sitemap.xml`))
+  assert.doesNotMatch(robotsText, /Disallow:\s*\/shop/)
+
   const sitemap = await get('/sitemap.xml')
   assert.equal(sitemap.status, 200)
   const xml = await sitemap.text()
   assert.ok(xml.includes(`${url}/products/${product.slug}`))
   assert.ok(xml.includes(`${url}/products/${secondProduct.slug}`), 'Sitemap includes later product pages')
   assert.ok(!xml.includes('/track-order'), 'Private-look-up UI is not indexed')
-  assert.ok(xml.includes(`<image:loc>${url}${placeholder}</image:loc>`), 'Sitemap image URL is absolute')
+  assert.ok(xml.includes(`<image:loc>${url}/favicon.ico</image:loc>`), 'Sitemap image URL is absolute')
+  assert.ok(!xml.includes(placeholder), 'Sitemap excludes placeholder media')
+  assert.ok(xml.includes(`${url}/shop?category=summer`), 'Sitemap retains the populated parent collection')
+  assert.ok(xml.includes(`${url}/shop?category=smoke-collection`), 'Sitemap retains the populated child collection')
+  assert.ok(!xml.includes('empty-shelf'), 'Sitemap excludes empty collections')
   const assets = await readdir(new URL('../.output/public/_nuxt/', import.meta.url))
   assert.ok(assets.some(name => name.endsWith('.woff2')), 'Fonts should be served from the built site')
   for (const license of ['/licenses/playfair-display.txt', '/licenses/plus-jakarta-sans.txt']) {
     assert.equal((await get(license)).status, 200)
   }
-  console.log('Production smoke passed: storefront, catalog fixture, tracking page, sitemap, fonts and WebP image optimizer.')
+  console.log('Production smoke passed: storefront, catalog fixture, HTTP and SEO metadata, sitemap, tracking, fonts and WebP optimizer.')
 } catch (error) {
   if (log) console.error(log)
   throw error
