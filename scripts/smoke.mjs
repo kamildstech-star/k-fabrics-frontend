@@ -117,6 +117,14 @@ try {
     assert.equal((html.match(/<main(?:>|\s)/g) || []).length, 1, `${path} has one main landmark`)
     assert.match(html, /href="#main-content"[^>]*>Skip to main content<\/a>/)
     if (path === '/shop' || path.startsWith('/products/')) assert.match(html, /Smoke Test Lawn Set/)
+    if (path.startsWith('/products/')) {
+      const title = html.indexOf('<h1');
+      const media = html.indexOf('class="pdp-mobile-photo');
+      const sizing = html.indexOf('id="product-sizing"');
+      assert.ok(title > 0 && title < media && media < sizing, 'Read the product title, then photos, then choices');
+      assert.match(html.slice(title, media), /Rs\. 3,999/, 'Price is grouped with the title');
+      assert.match(html.slice(sizing), /data-size[^>]+aria-pressed="false"/, 'Size never starts preselected');
+    }
     if (path === '/shop') {
       const imageLink = html.match(/<a[^>]+aria-label="View Smoke Test Lawn Set"[^>]*>([\s\S]*?)<\/a>/)?.[1]
       assert.ok(imageLink, 'Catalog photo has a named product link')

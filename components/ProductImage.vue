@@ -8,7 +8,8 @@ const props = withDefaults(defineProps<{
   height: number
   sizes?: string
   loading?: 'lazy' | 'eager'
-}>(), { loading: 'lazy' })
+  fit?: 'cover' | 'inside'
+}>(), { loading: 'lazy', fit: 'cover' })
 
 const placeholder = '/images/product-placeholder.svg'
 const rawImage = ref<HTMLImageElement | null>(null)
@@ -55,7 +56,7 @@ const isOptimizable = computed(() => {
     :loading="loading"
     decoding="async"
     format="webp"
-    fit="cover"
+    :fit="fit"
     @error="loadStage = 'original'"
   />
   <img

@@ -519,7 +519,7 @@ const productWhatsApp = computed(() => product.value
 </script>
 
 <template>
-  <div class="bg-brand-white min-h-screen pb-20 lg:pb-0">
+  <div class="pdp-shell bg-brand-white min-h-screen">
     <!-- Loading State -->
     <div v-if="pending" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
@@ -554,26 +554,40 @@ const productWhatsApp = computed(() => product.value
     </div>
 
     <!-- Product Detail Container -->
-    <div v-else class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      <!-- Breadcrumbs -->
-      <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] uppercase tracking-luxury text-brand-muted mb-8">
-        <NuxtLink to="/" class="hover:text-brand-charcoal transition-colors">Home</NuxtLink>
-        <span>/</span>
-        <NuxtLink to="/shop" class="hover:text-brand-charcoal transition-colors">Shop</NuxtLink>
+    <div v-else class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-8 sm:pt-6 lg:py-12">
+      <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-brand-muted mb-2 lg:mb-8">
+        <NuxtLink to="/shop" class="inline-flex items-center gap-1 min-h-9 hover:underline">
+          <span aria-hidden="true" class="lg:hidden">‹</span> Shop
+        </NuxtLink>
         <template v-if="product.category">
-          <span>/</span>
-          <NuxtLink :to="`/shop?category=${product.category.slug}`" class="hover:text-brand-charcoal transition-colors">
+          <span aria-hidden="true">/</span>
+          <NuxtLink :to="`/shop?category=${product.category.slug}`" class="inline-flex items-center min-h-9 hover:underline">
             {{ product.category.name }}
           </NuxtLink>
         </template>
-        <span>/</span>
-        <span aria-current="page" class="text-brand-charcoal font-semibold truncate max-w-full">{{ product.name }}</span>
+        <span aria-hidden="true" class="hidden lg:inline">/</span>
+        <span aria-current="page" class="sr-only lg:not-sr-only lg:max-w-full lg:truncate">{{ product.name }}</span>
       </nav>
 
-      <!-- 2-Column Split: Left 60% Images | Right 40% Sticky Buy Box -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14">
-        <!-- ================= LEFT: Images Gallery ================= -->
-        <div class="lg:col-span-7">
+      <!-- Heading and price are first for mobile shoppers and assistive technology.
+           Desktop keeps the full gallery next to the buying information. -->
+      <div class="pdp-grid grid gap-y-4 lg:gap-x-14 lg:gap-y-6">
+        <header class="pdp-intro min-w-0 space-y-1.5 lg:space-y-4 lg:border-b lg:border-brand-border lg:pb-5">
+          <p v-if="product.fabric_type || product.piece_type || (availableColors.length === 1 && selectedColor)" class="text-xs uppercase tracking-wider text-brand-gold font-semibold">
+            {{ [product.fabric_type, product.piece_type, availableColors.length === 1 ? selectedColor : ''].filter(Boolean).join(' · ') }}
+          </p>
+          <h1 class="font-serif text-[1.65rem] sm:text-4xl font-bold text-brand-charcoal leading-tight break-words">{{ product.name }}</h1>
+          <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1" aria-live="polite" aria-atomic="true">
+            <span class="font-serif text-xl sm:text-3xl font-bold text-brand-charcoal">{{ formatPrice(finalUnitPrice) }}</span>
+            <template v-if="product.sale_price != null && Number(product.sale_price) < Number(product.base_price) && activeVariant?.price_override == null && !isCustomFit">
+              <del class="text-brand-muted text-sm"><span class="sr-only">Original price </span>{{ formatPrice(product.base_price) }}</del>
+              <span class="bg-brand-charcoal text-white text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5">Sale</span>
+            </template>
+            <span v-if="isCustomFit" class="text-xs text-brand-gold font-medium">Includes {{ formatPrice(customFitFee) }} custom fitting</span>
+          </div>
+        </header>
+
+        <div class="pdp-gallery min-w-0">
           <!-- Desktop Layout: Vertical Stack of High-Res Images -->
           <div class="hidden lg:flex flex-col space-y-6">
             <div
@@ -592,12 +606,12 @@ const productWhatsApp = computed(() => product.value
 
           <!-- Mobile gallery supports touch and keyboard controls. -->
           <div class="lg:hidden">
-            <div class="relative aspect-[3/4] bg-brand-cream overflow-hidden border border-brand-border"
+            <div class="pdp-mobile-photo relative bg-brand-cream overflow-hidden border border-brand-border"
               @touchstart.passive="beginSwipe" @touchend.passive="endSwipe">
               <ProductImage
                 :src="gallery[activeImageIndex]?.image_url" :alt="gallery[activeImageIndex]?.alt_text || product.name"
-                :width="600" :height="800" sizes="95vw" loading="eager"
-                class="w-full h-full object-cover"
+                :width="600" :height="800" sizes="95vw" loading="eager" fit="inside" fetchpriority="high"
+                class="w-full h-full object-contain"
               />
 
               <!-- Carousel Controls if multiple images -->
@@ -606,7 +620,7 @@ const productWhatsApp = computed(() => product.value
                 class="absolute inset-y-0 inset-x-2 flex items-center justify-between pointer-events-none"
               >
                 <button
-                  type="button" class="pointer-events-auto p-2 bg-white/80 backdrop-blur-sm text-brand-charcoal hover:bg-white shadow"
+                  type="button" class="pointer-events-auto grid place-items-center min-w-11 min-h-11 bg-white/90 backdrop-blur-sm text-brand-charcoal hover:bg-white shadow"
                   aria-label="Previous image"
                   @click="activeImageIndex = (activeImageIndex - 1 + gallery.length) % gallery.length"
                 >
@@ -615,7 +629,7 @@ const productWhatsApp = computed(() => product.value
                   </svg>
                 </button>
                 <button
-                  type="button" class="pointer-events-auto p-2 bg-white/80 backdrop-blur-sm text-brand-charcoal hover:bg-white shadow"
+                  type="button" class="pointer-events-auto grid place-items-center min-w-11 min-h-11 bg-white/90 backdrop-blur-sm text-brand-charcoal hover:bg-white shadow"
                   aria-label="Next image"
                   @click="activeImageIndex = (activeImageIndex + 1) % gallery.length"
                 >
@@ -625,77 +639,28 @@ const productWhatsApp = computed(() => product.value
                 </button>
               </div>
 
-              <!-- Indicators -->
-              <div
-                v-if="gallery.length > 1"
-                class="absolute bottom-3 inset-x-0 flex items-center justify-center space-x-1.5"
-              >
-                <button
-                  v-for="(img, idx) in gallery"
-                  :key="img.id"
-                  class="w-6 h-6 rounded-full transition-all ring-4 ring-inset ring-white"
-                  :class="[Number(idx) === activeImageIndex ? 'bg-brand-charcoal' : 'bg-brand-charcoal/40']"
-                  :aria-label="`Slide to image ${Number(idx) + 1}`"
-                  :aria-current="idx === activeImageIndex ? 'true' : undefined"
-                  @click="activeImageIndex = Number(idx)"
-                />
-              </div>
             </div>
+            <p v-if="gallery.length > 1" aria-live="polite" aria-atomic="true" class="mt-1 text-center text-xs text-brand-muted">
+              Photo {{ activeImageIndex + 1 }} of {{ gallery.length }}
+            </p>
           </div>
         </div>
 
-        <!-- ================= RIGHT: Sticky Buy Box (40%) ================= -->
-        <div class="lg:col-span-5">
-          <div class="sticky top-28 space-y-6 self-start">
-            <!-- Header Meta: Fabric Badge & Collection -->
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] uppercase tracking-luxury text-brand-gold font-semibold">
-                {{ product.fabric_type }} · {{ product.piece_type }}
-              </span>
-              <span
-                v-if="product.sale_price"
-                class="bg-brand-charcoal text-white text-[9px] uppercase tracking-luxury font-semibold px-2 py-0.5"
-              >
-                Sale
-              </span>
-            </div>
-
-            <!-- Product Title -->
-            <h1 class="font-serif text-3xl sm:text-4xl font-bold text-brand-charcoal leading-tight">
-              {{ product.name }}
-            </h1>
-
-            <!-- Price Display -->
-            <div class="flex items-baseline space-x-3 border-b border-brand-border pb-6">
-              <span class="font-serif text-2xl sm:text-3xl font-bold text-brand-charcoal">
-                {{ formatPrice(finalUnitPrice) }}
-              </span>
-              <span
-                v-if="product.sale_price && activeVariant?.price_override == null"
-                class="line-through text-brand-muted text-sm"
-              >
-                {{ formatPrice(product.base_price) }}
-              </span>
-              <span
-                v-if="isCustomFit"
-                class="text-[11px] text-brand-gold font-medium uppercase tracking-wider"
-              >
-                (Includes {{ formatPrice(customFitFee) }} custom fitting)
-              </span>
-            </div>
-
+        <div class="pdp-buy min-w-0">
+          <div class="space-y-4 lg:space-y-6">
             <!-- Color Swatches (if available) -->
-            <div v-if="availableColors.some(option => option.color)" class="space-y-2.5">
+            <div v-if="availableColors.length > 1" class="space-y-1.5 lg:space-y-2.5">
               <div class="flex items-center justify-between">
                 <span class="text-xs uppercase tracking-luxury text-brand-charcoal font-medium">
                   Color: <span class="font-semibold text-brand-charcoal">{{ selectedColor || 'Not specified' }}</span>
                 </span>
               </div>
-              <div class="flex items-center space-x-3">
+              <div role="group" aria-label="Colour" class="flex flex-wrap items-center gap-2">
                 <button
                   v-for="item in availableColors"
                   :key="item.color"
-                  class="w-7 h-7 rounded-full border-2 transition-all p-0.5"
+                  type="button"
+                  class="w-11 h-11 rounded-full border-2 transition-all p-1.5"
                   :class="[
                     selectedColor === item.color
                       ? 'border-brand-charcoal ring-2 ring-brand-charcoal/30'
@@ -715,13 +680,14 @@ const productWhatsApp = computed(() => product.value
             </div>
 
             <!-- Size Selector & Size Guide Trigger -->
-            <div ref="sizeSelector" tabindex="-1" class="space-y-3">
-              <div class="flex items-center justify-between">
+            <div id="product-sizing" ref="sizeSelector" tabindex="-1" class="space-y-2 lg:space-y-3">
+              <div class="flex items-center justify-between gap-2">
                 <span class="text-xs uppercase tracking-luxury text-brand-charcoal font-medium">
                   {{ colorSizes.length ? 'Select size' : 'Sizing' }}
                 </span>
                 <button
-                  class="text-xs text-brand-charcoal underline underline-offset-4 hover:text-brand-gold transition-colors font-medium"
+                  type="button"
+                  class="inline-flex items-center min-h-9 px-1 text-sm text-brand-charcoal underline underline-offset-4 hover:text-brand-gold transition-colors font-medium"
                   @click="sizeGuideOpen = true"
                 >
                   Size Guide
@@ -729,12 +695,13 @@ const productWhatsApp = computed(() => product.value
               </div>
 
               <!-- Sharp Size Boxes -->
-              <div v-if="colorSizes.length" role="group" aria-label="Select size" class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              <div v-if="colorSizes.length" role="group" aria-label="Select size" class="pdp-size-grid grid gap-1 lg:gap-2">
                 <button
                   v-for="size in colorSizes"
                   data-size
                   :key="size"
-                  class="py-2.5 sm:py-3 text-xs font-medium uppercase border transition-colors relative flex flex-col items-center justify-center"
+                  type="button"
+                  class="min-h-11 px-1 py-1 text-sm font-medium uppercase border transition-colors flex flex-col items-center justify-center break-all"
                   :class="[
                     selectedSize === size && !isCustomFit
                       ? 'border-brand-charcoal bg-brand-charcoal text-white font-bold'
@@ -748,7 +715,7 @@ const productWhatsApp = computed(() => product.value
                   <span>{{ size }}</span>
                   <span
                     v-if="!isSizeAvailable(size)"
-                    class="text-[8px] uppercase tracking-tighter"
+                    class="text-[9px] leading-tight"
                     :class="[selectedSize === size && !isCustomFit ? 'text-amber-200' : 'text-amber-700 font-semibold']"
                   >
                     Sold Out
@@ -1112,7 +1079,7 @@ const productWhatsApp = computed(() => product.value
                   <p v-if="product.fit_notes" class="whitespace-pre-line"><strong>Fit:</strong> {{ product.fit_notes }}</p>
                   <ul class="list-disc pl-4 space-y-1 text-brand-charcoal">
                     <li><strong class="font-medium">Fabric:</strong> {{ product.fabric_type }}</li>
-                    <li><strong class="font-medium">Pieces:</strong> {{ product.piece_type }}</li>
+                    <li v-if="product.piece_type"><strong class="font-medium">Pieces:</strong> {{ product.piece_type }}</li>
                     <li v-if="product.category"><strong class="font-medium">Category:</strong> {{ product.category.name }}</li>
                   </ul>
                 </div>
@@ -1515,7 +1482,7 @@ const productWhatsApp = computed(() => product.value
     </div>
 
     <!-- Mobile Sticky Bottom Action Bar -->
-    <div v-if="!pending && product && !error && (colorSizes.length || customVariant)" class="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-brand-border p-3 z-30 flex items-center gap-2 shadow-2xl">
+    <div v-if="!pending && product && !error && (colorSizes.length || customFitAvailable)" class="pdp-sticky-buy lg:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-brand-border p-3 z-30 flex items-center gap-2 shadow-2xl">
       <div class="flex-1">
         <p class="text-xs text-brand-muted leading-none">{{ isCustomFit ? 'Custom fit' : selectedSize ? `Size ${selectedSize}` : 'Select a size' }}</p>
         <p class="font-serif text-base font-bold text-brand-charcoal leading-tight">
@@ -1535,8 +1502,9 @@ const productWhatsApp = computed(() => product.value
       </div>
       <button
         v-else
-        class="flex-1 py-3 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium"
-        @click="handleAddToCart"
+        type="button"
+        class="flex-1 min-h-11 px-2 py-3 bg-brand-charcoal text-white text-xs uppercase tracking-wider font-medium"
+        @click="activeVariant ? handleAddToCart() : focusSizeChoice()"
       >
         {{ activeVariant ? 'Add to Bag' : 'Choose a size' }}
       </button>
@@ -1680,5 +1648,21 @@ const productWhatsApp = computed(() => product.value
   </div>
 </template>
 <style scoped>
+.pdp-shell { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); }
+.pdp-sticky-buy { padding-bottom: calc(.75rem + env(safe-area-inset-bottom, 0px)); }
+.pdp-mobile-photo { height: clamp(10rem, 32vh, 26rem); height: clamp(10rem, 32svh, 26rem); }
+.pdp-size-grid { grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); }
+@media (min-width: 1024px) {
+  .pdp-shell { padding-bottom: 0; }
+  .pdp-grid {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "photos intro" "photos buy";
+    align-items: start;
+  }
+  .pdp-intro { grid-area: intro; }
+  .pdp-gallery { grid-area: photos; }
+  .pdp-buy { grid-area: buy; }
+}
 :where(input, textarea, select, button, a):focus-visible { outline: 2px solid #202020; outline-offset: 3px; }
 </style>
