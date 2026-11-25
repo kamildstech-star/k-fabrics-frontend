@@ -9,6 +9,19 @@ const wishlist = useWishlistStore()
 
 const mobileMenuOpen = ref(false)
 const searchOpen = ref(false)
+const closeMobileMenu = () => { mobileMenuOpen.value = false }
+const { dialog: menuDialog, onCancel: onMenuCancel, onKeydown: onMenuKeydown } = useStorefrontDialog(
+  () => mobileMenuOpen.value, closeMobileMenu, '#mobile-navigation-trigger',
+)
+let desktopViewport: MediaQueryList | undefined
+function onViewportChange(event: MediaQueryListEvent) {
+  if (event.matches) closeMobileMenu()
+}
+onMounted(() => {
+  desktopViewport = window.matchMedia('(min-width: 1024px)')
+  desktopViewport.addEventListener('change', onViewportChange)
+})
+onBeforeUnmount(() => desktopViewport?.removeEventListener('change', onViewportChange))
 const { whatsapp } = useStoreContact()
 const chatUrl = computed(() => whatsapp())
 </script>
@@ -16,17 +29,22 @@ const chatUrl = computed(() => whatsapp())
 <template>
   <header class="sticky top-0 z-40 bg-brand-white border-b border-brand-border">
     <!-- Top Announcement Bar -->
-    <div class="bg-brand-charcoal text-white text-[11px] py-2 px-4 text-center tracking-wider font-light flex items-center justify-center">
+    <div class="bg-brand-charcoal text-white text-[11px] py-2 px-4 text-center text-center tracking-wider font-light flex items-center justify-center">
       <span>Free Delivery on Orders Above Rs. 5,000 | Custom Stitching Available</span>
     </div>
 
     <!-- Main Navigation Bar -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+    <div class="mx-auto flex h-20 max-w-7xl items-center justify-between gap-2 px-3 sm:px-6 lg:px-8">
       <!-- Mobile Menu Trigger -->
-      <div class="flex items-center lg:hidden">
+      <div class="flex shrink-0 items-center lg:hidden">
         <button
-          class="text-brand-charcoal p-2 -ml-2"
+          id="mobile-navigation-trigger"
+          type="button"
+          class="-ml-1 p-1.5 text-brand-charcoal"
           aria-label="Open navigation menu"
+          aria-haspopup="dialog"
+          aria-controls="mobile-navigation-dialog"
+          :aria-expanded="mobileMenuOpen"
           @click="mobileMenuOpen = true"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -36,7 +54,7 @@ const chatUrl = computed(() => whatsapp())
       </div>
 
       <!-- Desktop Left Navigation Links -->
-      <nav class="hidden lg:flex items-center space-x-8 text-xs font-medium uppercase tracking-luxury text-brand-charcoal">
+      <nav aria-label="Main navigation" class="hidden lg:flex items-center space-x-8 text-xs font-medium uppercase tracking-luxury text-brand-charcoal">
         <NuxtLink to="/shop?sort=newest" class="hover:text-brand-gold transition-colors">
           New In
         </NuxtLink>
@@ -55,23 +73,28 @@ const chatUrl = computed(() => whatsapp())
       </nav>
 
       <!-- Center Luxury Serif Logo -->
-      <div class="text-center">
+      <div class="min-w-0 text-center">
         <NuxtLink to="/" class="inline-block">
-          <span class="font-serif text-2xl sm:text-3xl font-bold tracking-luxury text-brand-charcoal uppercase select-none">
+          <span class="whitespace-nowrap font-serif text-lg min-[360px]:text-2xl sm:text-3xl font-bold tracking-luxury text-brand-charcoal uppercase select-none">
             K. Fabrics
           </span>
-          <span class="block text-[8px] tracking-[0.3em] uppercase text-brand-muted -mt-1 font-sans">
+          <span class="block whitespace-nowrap text-[7px] min-[360px]:text-[8px] tracking-[0.24em] min-[360px]:tracking-[0.3em] uppercase text-brand-muted -mt-1 font-sans">
             Minimalist Luxury
           </span>
         </NuxtLink>
       </div>
 
       <!-- Right Utility Actions -->
-      <div class="flex items-center space-x-3 sm:space-x-5 text-brand-charcoal">
+      <div class="flex shrink-0 items-center gap-0.5 text-brand-charcoal min-[360px]:gap-2 sm:gap-5">
         <!-- Search Trigger -->
         <button
-          class="p-1 hover:text-brand-gold transition-colors"
+          id="site-search-trigger"
+          type="button"
+          class="p-1.5 transition-colors hover:text-brand-gold"
           aria-label="Search collection"
+          aria-haspopup="dialog"
+          aria-controls="storefront-search-dialog"
+          :aria-expanded="searchOpen"
           @click="searchOpen = !searchOpen"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,7 +105,7 @@ const chatUrl = computed(() => whatsapp())
         <!-- Wishlist Link with Live Counter -->
         <NuxtLink
           to="/wishlist"
-          class="p-1 hover:text-brand-gold transition-colors relative flex items-center"
+          class="relative flex items-center p-1.5 transition-colors hover:text-brand-gold"
           aria-label="Saved Wishlist"
         >
           <svg
@@ -95,7 +118,7 @@ const chatUrl = computed(() => whatsapp())
           </svg>
           <span
             v-if="wishlist.totalItems > 0"
-            class="absolute -top-1.5 -right-2 bg-brand-charcoal text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold"
+            class="absolute -top-1.5 right-0 bg-brand-charcoal text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold"
           >
             {{ wishlist.totalItems }}
           </span>
@@ -104,7 +127,7 @@ const chatUrl = computed(() => whatsapp())
         <!-- Account Link -->
         <NuxtLink
           :to="auth.isAuthenticated ? '/account' : '/login'"
-          class="p-1 hover:text-brand-gold transition-colors flex items-center space-x-1"
+          class="flex items-center space-x-1 p-1.5 transition-colors hover:text-brand-gold"
           :aria-label="auth.isAuthenticated ? 'Customer Account' : 'Sign In'"
           :title="auth.isAuthenticated ? `Signed in as ${auth.userName}` : 'Sign In'"
         >
@@ -118,8 +141,13 @@ const chatUrl = computed(() => whatsapp())
 
         <!-- Shopping Bag Trigger with Live Counter -->
         <button
-          class="p-1 hover:text-brand-gold transition-colors relative flex items-center"
+          class="relative flex items-center p-1.5 transition-colors hover:text-brand-gold"
+          id="site-cart-trigger"
+          type="button"
           aria-label="Open shopping bag"
+          aria-haspopup="dialog"
+          aria-controls="shopping-bag-dialog"
+          :aria-expanded="cart.isOpen"
           @click="cart.openCart()"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,7 +155,7 @@ const chatUrl = computed(() => whatsapp())
           </svg>
           <span
             v-if="cart.totalItems > 0"
-            class="absolute -top-1.5 -right-2 bg-brand-gold text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold"
+            class="absolute -top-1.5 right-0 bg-brand-gold text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold"
           >
             {{ cart.totalItems }}
           </span>
@@ -138,44 +166,29 @@ const chatUrl = computed(() => whatsapp())
     <!-- Live Predictive Search Modal/Overlay -->
     <SearchOverlay v-model="searchOpen" />
 
-    <!-- Mobile Slide-over Menu -->
-    <Transition
-      enter-active-class="transition-opacity duration-300 ease-out"
-      enter-from-class="opacity-0"
-      enter-to-class="opacity-100"
-      leave-active-class="transition-opacity duration-200 ease-in"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
-    >
-      <div
-        v-if="mobileMenuOpen"
-        class="fixed inset-0 bg-brand-charcoal/50 backdrop-blur-sm z-50 lg:hidden"
-        @click="mobileMenuOpen = false"
-      />
-    </Transition>
-
-    <Transition
-      enter-active-class="transform transition duration-300 ease-out"
-      enter-from-class="-translate-x-full"
-      enter-to-class="translate-x-0"
-      leave-active-class="transform transition duration-200 ease-in"
-      leave-from-class="translate-x-0"
-      leave-to-class="-translate-x-full"
-    >
-      <div
-        v-if="mobileMenuOpen"
-        class="fixed top-0 left-0 bottom-0 w-4/5 max-w-sm bg-brand-white z-50 shadow-2xl p-6 flex flex-col justify-between border-r border-brand-border lg:hidden"
+    <!-- Mobile slide-over navigation -->
+    <Teleport to="body">
+      <dialog
+        id="mobile-navigation-dialog"
+        ref="menuDialog"
+        aria-labelledby="mobile-navigation-title"
+        aria-modal="true"
+        class="storefront-dialog storefront-dialog--left fixed inset-y-0 left-0 right-auto m-0 h-[100dvh] max-h-none w-4/5 max-w-sm overflow-y-auto overscroll-contain border-r border-brand-border bg-brand-white p-0 text-brand-charcoal shadow-2xl"
+        @cancel="onMenuCancel"
+        @keydown="onMenuKeydown"
+        @click.self="closeMobileMenu"
       >
+       <div v-if="mobileMenuOpen" class="flex min-h-full flex-col justify-between p-5 sm:p-6">
         <div>
           <!-- Close button -->
           <div class="flex items-center justify-between pb-6 border-b border-brand-border">
-            <span class="font-serif text-lg font-bold tracking-luxury text-brand-charcoal uppercase">
-              K. Fabrics
-            </span>
+            <h2 id="mobile-navigation-title" class="font-serif text-lg font-bold tracking-luxury text-brand-charcoal">Menu</h2>
             <button
-              class="text-brand-charcoal p-1"
+              type="button"
+              class="p-2 text-brand-charcoal"
               aria-label="Close menu"
-              @click="mobileMenuOpen = false"
+              data-dialog-initial-focus
+              @click="closeMobileMenu"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
@@ -184,7 +197,7 @@ const chatUrl = computed(() => whatsapp())
           </div>
 
           <!-- Nav Items -->
-          <div class="py-6 flex flex-col space-y-5 text-sm uppercase tracking-luxury font-medium">
+          <nav aria-label="Mobile navigation" class="flex flex-col space-y-5 py-6 text-sm font-medium uppercase tracking-luxury">
             <NuxtLink
               to="/shop?sort=newest"
               class="text-brand-charcoal hover:text-brand-gold transition-colors"
@@ -245,7 +258,7 @@ const chatUrl = computed(() => whatsapp())
             >
               {{ auth.isAuthenticated ? 'My Account' : 'Sign In / Register' }}
             </NuxtLink>
-          </div>
+          </nav>
         </div>
 
         <!-- Mobile Footer Contact -->
@@ -260,7 +273,8 @@ const chatUrl = computed(() => whatsapp())
             <span>Chat on WhatsApp</span>
           </a>
         </div>
-      </div>
-    </Transition>
+       </div>
+      </dialog>
+    </Teleport>
   </header>
 </template>

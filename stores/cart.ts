@@ -22,6 +22,8 @@ export interface CustomFittingMeasurements {
   special_instructions?: string
 }
 
+export type TailoringMeasurementMethod = 'manual' | 'sample'
+
 export interface CartItem {
   id: string
   type: 'product' | 'stitching'
@@ -41,7 +43,7 @@ export interface CartItem {
   quantity: number
   estimatedDays?: number
   customFitting?: CustomFittingMeasurements | null
-  fabricDeliveryMethod?: string
+  measurementMethod?: TailoringMeasurementMethod
   designReferenceImage?: string | null
   neckStyle?: string
   sleeveStyle?: string
@@ -173,7 +175,7 @@ export const useCartStore = defineStore('cart', {
       serviceName: string
       price: number
       estimatedDays: number
-      fabricDeliveryMethod?: string
+      measurementMethod: TailoringMeasurementMethod
       designReferenceImage?: string | null
       neckStyle?: string
       sleeveStyle?: string
@@ -190,7 +192,7 @@ export const useCartStore = defineStore('cart', {
         price: booking.price,
         quantity: 1,
         estimatedDays: booking.estimatedDays,
-        fabricDeliveryMethod: booking.fabricDeliveryMethod,
+        measurementMethod: booking.measurementMethod,
         designReferenceImage: booking.designReferenceImage,
         neckStyle: booking.neckStyle,
         sleeveStyle: booking.sleeveStyle,

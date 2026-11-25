@@ -68,7 +68,7 @@ useSeoMeta({
             <span class="text-brand-gold font-mono text-sm">03.</span>
             <span>Cookies & Shopping Bag</span>
           </h2>
-          <p>We use essential cookies to keep you signed in and protect checkout. Your browser can remember ordinary items in your shopping bag. Tailoring measurements and design reference photos in the bag are not written to browser storage.</p>
+          <p>We use essential cookies to keep you signed in and protect checkout. Your browser can remember ordinary items in your shopping bag. Tailoring measurements and design reference photos in the bag are not written to browser storage. Refreshing or closing the tab clears unfinished tailoring bookings. Saved account measurement profiles can be loaded again.</p>
           <p>Advertising pixels and abandoned-cart marketing are not enabled on this storefront.</p>
         </section>
 

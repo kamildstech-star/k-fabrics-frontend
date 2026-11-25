@@ -480,7 +480,7 @@ const handleLogout = async () => {
         </aside>
 
         <!-- Main Content Area (9 Cols) -->
-        <main class="lg:col-span-9">
+        <section aria-label="Account details" class="min-w-0 lg:col-span-9">
           <!-- ================= TAB 1: MY ORDERS ================= -->
           <div v-if="activeTab === 'orders'" class="space-y-6">
             <div class="flex items-center justify-between border-b border-brand-border pb-4">
@@ -802,7 +802,7 @@ const handleLogout = async () => {
               </div>
             </div>
           </div>
-        </main>
+        </section>
       </div>
     </div>
 

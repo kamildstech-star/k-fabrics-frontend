@@ -2,7 +2,7 @@
 import { useCartStore, type CustomFittingMeasurements } from '~/stores/cart'
 import { useWishlistStore } from '~/stores/wishlist'
 import { useAuthStore } from '~/stores/auth'
-import { convertMeasurements, hasNumericMeasurements, measurementPayload } from '~/utils/checkout'
+import { convertMeasurements, measurementPayload, requiredMeasurementLabels } from '~/utils/checkout'
 import { useRecentlyViewed } from '~/composables/useRecentlyViewed'
 
 const config = useRuntimeConfig()
@@ -60,7 +60,7 @@ const handleToggleWishlist = () => {
 }
 
 // Fetch product data from API
-const { data: productResponse, pending, error } = await useFetch<any>(
+const { data: productResponse, pending, error, refresh } = await useFetch<any>(
   () => `${apiBase}/products/${encodeURIComponent(slug.value)}`,
   {
     lazy: false,
@@ -71,6 +71,24 @@ const product = computed(() => productResponse.value?.data || null)
 
 // State for active image in mobile gallery
 const activeImageIndex = ref(0)
+const gallery = computed<{ image_url: string | null; alt_text?: string; id: number }[]>(() =>
+  product.value?.images?.length ? product.value.images : [{ id: 0, image_url: product.value?.primary_image ?? null }])
+watch(slug, () => { activeImageIndex.value = 0 })
+let swipeStart: { x: number; y: number } | undefined
+function beginSwipe(event: TouchEvent) {
+  const point = event.touches[0]
+  swipeStart = event.touches.length === 1 && point ? { x: point.clientX, y: point.clientY } : undefined
+}
+function endSwipe(event: TouchEvent) {
+  const point = event.changedTouches[0]
+  const start = swipeStart
+  swipeStart = undefined
+  if (!point || !start) return
+  const x = point.clientX - start.x
+  if (Math.abs(x) < 44 || Math.abs(x) <= Math.abs(point.clientY - start.y)) return
+  const count = gallery.value.length
+  activeImageIndex.value = (activeImageIndex.value + (x > 0 ? -1 : 1) + count) % count
+}
 
 // Active color selection
 const selectedColor = ref('')
@@ -79,12 +97,10 @@ const selectedColor = ref('')
 watch(
   product,
   (p) => {
-    if (p?.variants?.length) {
-      const activeVariant = p.variants.find((v: any) => v.is_active && v.size !== 'Custom')
-      if (activeVariant) {
-        selectedColor.value = activeVariant.color || ''
-      }
-    }
+    const active = p?.variants?.filter((v: any) => v.is_active) || []
+    const firstVariant = active.find((v: any) => v.size !== 'Custom' && v.stock_quantity > 0)
+      ?? active.find((v: any) => v.size !== 'Custom') ?? active[0]
+    selectedColor.value = firstVariant?.color || ''
   },
   { immediate: true }
 )
@@ -94,16 +110,19 @@ const availableColors = computed(() => {
   if (!product.value?.variants) return []
   const map = new Map<string, { color: string; color_hex?: string }>()
   for (const v of product.value.variants) {
-    if (v.is_active && v.color && !map.has(v.color)) {
-      map.set(v.color, { color: v.color, color_hex: v.color_hex || '#1A1A1A' })
+    const color = v.color || ''
+    if (v.is_active && !map.has(color)) {
+      map.set(color, { color, color_hex: v.color_hex || '#1A1A1A' })
     }
   }
-  return Array.from(map.values())
+  return Array.from(map.values()).filter(option => option.color || map.size === 1 || product.value.variants
+    .some((variant: any) => variant.is_active && variant.size !== 'Custom' && !variant.color))
 })
 
 // Active size selection
 const selectedSize = ref<string>('')
 const sizeError = ref(false)
+const sizeSelector = ref<HTMLElement | null>(null)
 const selectionError = ref('')
 
 // Custom Fit toggle & measurement form state
@@ -144,26 +163,15 @@ const toggleAccordion = (key: 'details' | 'delivery' | 'care') => {
 const sizeGuideOpen = ref(false)
 const sizeGuideUnit = ref<'inches' | 'cm'>('inches')
 
-// Standard Size Chart Data
-const sizeChart = computed(() => {
-  if (sizeGuideUnit.value === 'inches') {
-    return [
-      { size: 'XS', chest: '34"', waist: '28"', hips: '36"', shoulder: '13.5"', length: '38"' },
-      { size: 'S', chest: '36"', waist: '30"', hips: '38"', shoulder: '14"', length: '39"' },
-      { size: 'M', chest: '38"', waist: '32"', hips: '41"', shoulder: '14.5"', length: '40"' },
-      { size: 'L', chest: '42"', waist: '36"', hips: '45"', shoulder: '15"', length: '41"' },
-      { size: 'XL', chest: '45"', waist: '40"', hips: '48"', shoulder: '16"', length: '42"' },
-    ]
-  } else {
-    return [
-      { size: 'XS', chest: '86 cm', waist: '71 cm', hips: '91 cm', shoulder: '34 cm', length: '97 cm' },
-      { size: 'S', chest: '91 cm', waist: '76 cm', hips: '97 cm', shoulder: '36 cm', length: '99 cm' },
-      { size: 'M', chest: '97 cm', waist: '81 cm', hips: '104 cm', shoulder: '37 cm', length: '102 cm' },
-      { size: 'L', chest: '107 cm', waist: '91 cm', hips: '114 cm', shoulder: '38 cm', length: '104 cm' },
-      { size: 'XL', chest: '114 cm', waist: '102 cm', hips: '122 cm', shoulder: '41 cm', length: '107 cm' },
-    ]
-  }
-})
+// Size guidance must come from the actual garment; do not guess missing sizes.
+const sizeChart = computed<{ size: string; bust?: number; waist?: number; hips?: number; length?: number }[]>(() =>
+  ['garment', 'body'].includes(product.value?.size_chart_type) && Array.isArray(product.value?.size_chart)
+    ? product.value.size_chart : [])
+function chartMeasurement(value?: number) {
+  const amount = Number(value)
+  if (!Number.isFinite(amount) || amount <= 0) return '—'
+  return sizeGuideUnit.value === 'inches' ? `${amount}″` : `${Math.round(amount * 25.4) / 10} cm`
+}
 
 // Price calculation
 const effectiveBasePrice = computed(() => {
@@ -182,16 +190,15 @@ const finalUnitPrice = computed(() => {
 const formatPrice = (val: number) => 'Rs. ' + Number(val).toLocaleString('en-PK')
 
 // Available sizes for the product
-const standardSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
-
-const getVariantForSize = (size: string) => {
-  if (!product.value?.variants) return null
-  return product.value.variants.find((v: any) => {
-    const matchSize = v.size === size
-    const matchColor = selectedColor.value ? v.color === selectedColor.value : true
-    return matchSize && matchColor && v.is_active
-  })
-}
+const sizeOrder = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
+const colorVariants = computed(() => (product.value?.variants || [])
+  .filter((v: any) => v.is_active && v.size !== 'Custom' && (v.color || '') === selectedColor.value))
+const colorSizes = computed(() => {
+  const sizes = Array.from(new Set<string>(colorVariants.value.map((v: { size: string }) => v.size)))
+  const rank = (size: string) => sizeOrder.includes(size) ? sizeOrder.indexOf(size) : sizeOrder.length
+  return sizes.sort((a, b) => rank(a) - rank(b) || a.localeCompare(b, 'en', { numeric: true }))
+})
+const getVariantForSize = (size: string) => colorVariants.value.find((v: any) => v.size === size) || null
 
 const isSizeAvailable = (size: string) => {
   const variant = getVariantForSize(size)
@@ -201,7 +208,7 @@ const isSizeAvailable = (size: string) => {
 // Custom measurements are only offered for an active Custom SKU.
 const customVariant = computed(() => {
   const variants = product.value?.variants?.filter((variant: { size: string; is_active: boolean }) => variant.size === 'Custom' && variant.is_active) || []
-  if (!selectedColor.value) return variants[0] || null
+  if (!selectedColor.value) return variants.find((variant: { color?: string | null }) => !variant.color) || null
   return variants.find((variant: { color?: string | null }) => variant.color === selectedColor.value)
     ?? variants.find((variant: { color?: string | null }) => !variant.color)
     ?? null
@@ -209,40 +216,55 @@ const customVariant = computed(() => {
 const activeVariant = computed(() => isCustomFit.value ? customVariant.value : getVariantForSize(selectedSize.value))
 watch(customVariant, variant => { if (!variant) isCustomFit.value = false })
 
-// Out of stock evaluation for selected size
-watch([product, selectedColor], () => {
-  if (!product.value || isSizeAvailable(selectedSize.value)) return
-  selectedSize.value = standardSizes.find(isSizeAvailable) || ''
-}, { immediate: true })
-
-const isOutOfStock = computed(() => {
-  if (isCustomFit.value) return false
-  if (!activeVariant.value) return false
-  return activeVariant.value.stock_quantity <= 0
+// A colour change starts a new selection. Never silently substitute a different size.
+watch([slug, selectedColor], () => {
+  selectedSize.value = ''
+  sizeError.value = false
+  selectionError.value = ''
 })
+const isOutOfStock = computed(() => !isCustomFit.value && activeVariant.value && activeVariant.value.stock_quantity <= 0)
+const includeTrousers = computed(() => product.value?.piece_type !== '1-piece')
+
+function focusSizeChoice() {
+  const node = sizeSelector.value
+  if (!node) return
+  const target = colorSizes.value.length
+    ? node.querySelector<HTMLElement>('button[data-size]')
+    : document.querySelector<HTMLElement>('#custom-fit-checkbox')
+  const focusTarget = target ?? node
+  focusTarget.focus({ preventScroll: true })
+  node.scrollIntoView({ block: 'center' })
+}
 
 // Stock Alert Subscription
 const stockAlertContact = ref('')
 const stockAlertLoading = ref(false)
 const stockAlertSuccess = ref(false)
 const stockAlertError = ref('')
+watch(activeVariant, () => {
+  stockAlertSuccess.value = false
+  stockAlertError.value = ''
+})
 
 const handleStockAlert = async () => {
   if (!stockAlertContact.value.trim() || !activeVariant.value) return
+  const variantId = activeVariant.value.id
   stockAlertLoading.value = true
   stockAlertError.value = ''
   try {
     await auth.apiFetch('/stock-alerts', {
       method: 'POST',
       body: {
-        product_variant_id: activeVariant.value.id,
+        product_variant_id: variantId,
         contact: stockAlertContact.value.trim(),
       },
     })
-    stockAlertSuccess.value = true
-    stockAlertContact.value = ''
+    if (activeVariant.value?.id === variantId) {
+      stockAlertSuccess.value = true
+      stockAlertContact.value = ''
+    }
   } catch (err: any) {
-    stockAlertError.value = err?.data?.message || 'Unable to register stock alert. Please try again.'
+    if (activeVariant.value?.id === variantId) stockAlertError.value = err?.data?.message || 'Unable to register stock alert. Please try again.'
   } finally {
     stockAlertLoading.value = false
   }
@@ -250,9 +272,8 @@ const handleStockAlert = async () => {
 
 const scrollToStockAlert = () => {
   const el = document.getElementById('stock-alert-section')
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
+  el?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true })
+  el?.scrollIntoView({ block: 'center' })
 }
 
 // Reviews & Ratings
@@ -435,6 +456,7 @@ const filteredReviews = computed(() => {
 const handleAddToCart = () => {
   if (!selectedSize.value && !isCustomFit.value) {
     sizeError.value = true
+    focusSizeChoice()
     return
   }
   sizeError.value = false
@@ -448,9 +470,11 @@ const handleAddToCart = () => {
   if (isCustomFit.value) {
     try {
       fitting = measurementPayload(measurements, true)
-      if (!fitting || !hasNumericMeasurements(fitting)) throw new Error('Enter a body measurement to request custom fitting.')
+      const missing = requiredMeasurementLabels(fitting, includeTrousers.value)
+      if (missing.length) throw new Error(`Complete these measurements: ${missing.join(', ')}.`)
     } catch (error) {
       selectionError.value = error instanceof Error ? error.message : 'Check the measurements you entered.'
+      document.getElementById('fit-shirt-length')?.focus()
       return
     }
   }
@@ -476,7 +500,7 @@ const productWhatsApp = computed(() => product.value
 </script>
 
 <template>
-  <div class="bg-brand-white min-h-screen">
+  <div class="bg-brand-white min-h-screen pb-20 lg:pb-0">
     <!-- Loading State -->
     <div v-if="pending" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
@@ -499,8 +523,9 @@ const productWhatsApp = computed(() => product.value
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
       </div>
-      <h1 class="font-serif text-2xl font-bold text-brand-charcoal mb-2">Design Piece Not Found</h1>
-      <p class="text-xs text-brand-muted mb-6">The luxury garment you are seeking might have been archived or is temporarily out of season.</p>
+      <h1 class="font-serif text-2xl font-bold text-brand-charcoal mb-2">{{ error && error.statusCode !== 404 ? 'Could not load this item' : 'Item not found' }}</h1>
+      <p class="text-sm text-brand-muted mb-6">{{ error && error.statusCode !== 404 ? 'Try again in a moment.' : 'This item may no longer be available.' }}</p>
+      <button v-if="error && error.statusCode !== 404" type="button" class="inline-block px-5 py-3 mr-3 border border-brand-charcoal" @click="refresh()">Try again</button>
       <NuxtLink
         to="/shop"
         class="inline-block px-8 py-3.5 bg-brand-charcoal text-white text-xs uppercase tracking-luxury hover:bg-brand-gold transition-colors"
@@ -512,7 +537,7 @@ const productWhatsApp = computed(() => product.value
     <!-- Product Detail Container -->
     <div v-else class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       <!-- Breadcrumbs -->
-      <nav class="flex items-center space-x-2 text-[10px] uppercase tracking-luxury text-brand-muted mb-8">
+      <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] uppercase tracking-luxury text-brand-muted mb-8">
         <NuxtLink to="/" class="hover:text-brand-charcoal transition-colors">Home</NuxtLink>
         <span>/</span>
         <NuxtLink to="/shop" class="hover:text-brand-charcoal transition-colors">Shop</NuxtLink>
@@ -523,7 +548,7 @@ const productWhatsApp = computed(() => product.value
           </NuxtLink>
         </template>
         <span>/</span>
-        <span class="text-brand-charcoal font-semibold truncate max-w-[200px] sm:max-w-none">{{ product.name }}</span>
+        <span aria-current="page" class="text-brand-charcoal font-semibold truncate max-w-full">{{ product.name }}</span>
       </nav>
 
       <!-- 2-Column Split: Left 60% Images | Right 40% Sticky Buy Box -->
@@ -533,64 +558,47 @@ const productWhatsApp = computed(() => product.value
           <!-- Desktop Layout: Vertical Stack of High-Res Images -->
           <div class="hidden lg:flex flex-col space-y-6">
             <div
-              v-for="img in product.images"
+              v-for="(img, idx) in gallery"
               :key="img.id"
               class="relative aspect-[3/4] bg-brand-cream overflow-hidden border border-brand-border"
             >
-              <img
-                :src="img.image_url"
-                :alt="img.alt_text || product.name"
+              <ProductImage
+                :src="img.image_url" :alt="img.alt_text || product.name"
+                :width="720" :height="960" sizes="lg:55vw"
+                :loading="idx === 0 ? 'eager' : 'lazy'"
                 class="w-full h-full object-cover"
-                loading="lazy"
-              >
-            </div>
-            <!-- If no images array but primary_image exists -->
-            <div
-              v-if="!product.images || product.images.length === 0"
-              class="relative aspect-[3/4] bg-brand-cream overflow-hidden border border-brand-border"
-            >
-              <img
-                :src="product.primary_image"
-                :alt="product.name"
-                class="w-full h-full object-cover"
-              >
+              />
             </div>
           </div>
 
-          <!-- Mobile Layout: Swipeable Carousel with Dot Indicators -->
+          <!-- Mobile gallery supports touch and keyboard controls. -->
           <div class="lg:hidden">
-            <div class="relative aspect-[3/4] bg-brand-cream overflow-hidden border border-brand-border">
-              <img
-                v-if="product.images && product.images.length > 0"
-                :src="product.images[activeImageIndex]?.image_url || product.primary_image"
-                :alt="product.name"
-                class="w-full h-full object-cover transition-opacity duration-300"
-              >
-              <img
-                v-else
-                :src="product.primary_image"
-                :alt="product.name"
+            <div class="relative aspect-[3/4] bg-brand-cream overflow-hidden border border-brand-border"
+              @touchstart.passive="beginSwipe" @touchend.passive="endSwipe">
+              <ProductImage
+                :src="gallery[activeImageIndex]?.image_url" :alt="gallery[activeImageIndex]?.alt_text || product.name"
+                :width="600" :height="800" sizes="95vw" loading="eager"
                 class="w-full h-full object-cover"
-              >
+              />
 
               <!-- Carousel Controls if multiple images -->
               <div
-                v-if="product.images && product.images.length > 1"
+                v-if="gallery.length > 1"
                 class="absolute inset-y-0 inset-x-2 flex items-center justify-between pointer-events-none"
               >
                 <button
-                  class="pointer-events-auto p-2 bg-white/80 backdrop-blur-sm text-brand-charcoal hover:bg-white shadow"
+                  type="button" class="pointer-events-auto p-2 bg-white/80 backdrop-blur-sm text-brand-charcoal hover:bg-white shadow"
                   aria-label="Previous image"
-                  @click="activeImageIndex = (activeImageIndex - 1 + product.images.length) % product.images.length"
+                  @click="activeImageIndex = (activeImageIndex - 1 + gallery.length) % gallery.length"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
                 <button
-                  class="pointer-events-auto p-2 bg-white/80 backdrop-blur-sm text-brand-charcoal hover:bg-white shadow"
+                  type="button" class="pointer-events-auto p-2 bg-white/80 backdrop-blur-sm text-brand-charcoal hover:bg-white shadow"
                   aria-label="Next image"
-                  @click="activeImageIndex = (activeImageIndex + 1) % product.images.length"
+                  @click="activeImageIndex = (activeImageIndex + 1) % gallery.length"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -600,15 +608,16 @@ const productWhatsApp = computed(() => product.value
 
               <!-- Indicators -->
               <div
-                v-if="product.images && product.images.length > 1"
+                v-if="gallery.length > 1"
                 class="absolute bottom-3 inset-x-0 flex items-center justify-center space-x-1.5"
               >
                 <button
-                  v-for="(img, idx) in product.images"
+                  v-for="(img, idx) in gallery"
                   :key="img.id"
-                  class="w-2 h-2 rounded-full transition-all"
-                  :class="[Number(idx) === activeImageIndex ? 'bg-brand-charcoal w-5' : 'bg-brand-charcoal/40']"
+                  class="w-6 h-6 rounded-full transition-all ring-4 ring-inset ring-white"
+                  :class="[Number(idx) === activeImageIndex ? 'bg-brand-charcoal' : 'bg-brand-charcoal/40']"
                   :aria-label="`Slide to image ${Number(idx) + 1}`"
+                  :aria-current="idx === activeImageIndex ? 'true' : undefined"
                   @click="activeImageIndex = Number(idx)"
                 />
               </div>
@@ -657,10 +666,10 @@ const productWhatsApp = computed(() => product.value
             </div>
 
             <!-- Color Swatches (if available) -->
-            <div v-if="availableColors.length > 0" class="space-y-2.5">
+            <div v-if="availableColors.some(option => option.color)" class="space-y-2.5">
               <div class="flex items-center justify-between">
                 <span class="text-xs uppercase tracking-luxury text-brand-charcoal font-medium">
-                  Color: <span class="font-semibold text-brand-charcoal">{{ selectedColor }}</span>
+                  Color: <span class="font-semibold text-brand-charcoal">{{ selectedColor || 'Not specified' }}</span>
                 </span>
               </div>
               <div class="flex items-center space-x-3">
@@ -673,8 +682,8 @@ const productWhatsApp = computed(() => product.value
                       ? 'border-brand-charcoal ring-2 ring-brand-charcoal/30'
                       : 'border-brand-border hover:border-brand-charcoal'
                   ]"
-                  :title="item.color"
-                  :aria-label="item.color"
+                  :title="item.color || 'Colour not specified'"
+                  :aria-label="item.color || 'Colour not specified'"
                   :aria-pressed="selectedColor === item.color"
                   @click="selectedColor = item.color"
                 >
@@ -687,10 +696,10 @@ const productWhatsApp = computed(() => product.value
             </div>
 
             <!-- Size Selector & Size Guide Trigger -->
-            <div class="space-y-3">
+            <div ref="sizeSelector" tabindex="-1" class="space-y-3">
               <div class="flex items-center justify-between">
                 <span class="text-xs uppercase tracking-luxury text-brand-charcoal font-medium">
-                  Select Size
+                  {{ colorSizes.length ? 'Select size' : 'Sizing' }}
                 </span>
                 <button
                   class="text-xs text-brand-charcoal underline underline-offset-4 hover:text-brand-gold transition-colors font-medium"
@@ -701,9 +710,10 @@ const productWhatsApp = computed(() => product.value
               </div>
 
               <!-- Sharp Size Boxes -->
-              <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              <div v-if="colorSizes.length" role="group" aria-label="Select size" class="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 <button
-                  v-for="size in standardSizes"
+                  v-for="size in colorSizes"
+                  data-size
                   :key="size"
                   class="py-2.5 sm:py-3 text-xs font-medium uppercase border transition-colors relative flex flex-col items-center justify-center"
                   :class="[
@@ -714,7 +724,7 @@ const productWhatsApp = computed(() => product.value
                         : 'border-brand-border bg-brand-cream/60 text-brand-muted hover:border-brand-charcoal'
                   ]"
                   :aria-pressed="selectedSize === size && !isCustomFit"
-                  @click="() => { selectedSize = size; isCustomFit = false; sizeError = false; }"
+                  @click="selectedSize = size; isCustomFit = false; sizeError = false; selectionError = ''"
                 >
                   <span>{{ size }}</span>
                   <span
@@ -727,8 +737,9 @@ const productWhatsApp = computed(() => product.value
                 </button>
               </div>
 
-              <p v-if="sizeError" role="alert" class="text-xs text-red-600 font-medium">
-                Please select a standard size or toggle Custom Fit.
+              <p v-if="!colorSizes.length && !customVariant" role="status" class="text-sm">This item is currently unavailable.</p>
+              <p v-if="sizeError" role="alert" class="text-sm text-red-800 font-medium">
+                {{ customVariant ? 'Select a size or choose Custom Fit.' : 'Select a size before adding to bag.' }}
               </p>
             </div>
 
@@ -739,6 +750,7 @@ const productWhatsApp = computed(() => product.value
                   <input
                     id="custom-fit-checkbox"
                     v-model="isCustomFit"
+                    @change="sizeError = false; selectionError = ''"
                     type="checkbox"
                     class="mt-1 h-4 w-4 accent-brand-charcoal cursor-pointer"
                     @click.stop
@@ -751,7 +763,7 @@ const productWhatsApp = computed(() => product.value
                       </span>
                     </label>
                     <p class="text-xs text-brand-muted mt-0.5 leading-relaxed">
-                      Hand-tailored to your measurements. For privacy, unsent fitting details are not kept if you reload this page.
+                      Enter all shirt measurements and, for sets, trouser length and waist. Pancha and notes are optional. Unsent measurements are not saved when you reload.
                     </p>
                   </div>
                 </div>
@@ -897,7 +909,7 @@ const productWhatsApp = computed(() => product.value
                   </div>
 
                   <!-- Trouser Fields -->
-                  <div>
+                  <div v-if="includeTrousers">
                     <p class="text-[10px] uppercase tracking-luxury text-brand-gold font-semibold mb-2">
                       Trouser / Shalwar ({{ measurementUnit }})
                     </p>
@@ -946,8 +958,9 @@ const productWhatsApp = computed(() => product.value
 
                   <!-- Extra Notes -->
                   <div>
-                    <label class="text-[10px] uppercase text-brand-muted block mb-1">Special Tailoring Instructions</label>
+                    <label for="fitting-notes" class="text-[10px] uppercase text-brand-muted block mb-1">Special Tailoring Instructions (optional)</label>
                     <textarea
+                      id="fitting-notes"
                       v-model="measurements.special_instructions"
                       rows="2"
                       placeholder="e.g. Boat neckline, bell sleeves, loose silhouette..."
@@ -1011,14 +1024,14 @@ const productWhatsApp = computed(() => product.value
 
               <!-- Standard Add to Bag (When in stock) -->
               <button
-                v-else
+                v-else-if="colorSizes.length || customVariant"
                 class="w-full py-4 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium hover:bg-brand-gold transition-colors duration-300 shadow-md flex items-center justify-center space-x-2"
                 @click="handleAddToCart"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
-                <span>Add to Bag</span>
+                <span>{{ activeVariant ? 'Add to Bag' : 'Choose a size' }}</span>
               </button>
 
               <a
@@ -1052,12 +1065,18 @@ const productWhatsApp = computed(() => product.value
               </button>
             </div>
 
+            <div class="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+              <NuxtLink to="/policies/shipping" class="underline underline-offset-4">Delivery estimates</NuxtLink>
+              <NuxtLink to="/policies/returns" class="underline underline-offset-4">{{ isCustomFit ? 'Custom order policy' : '7-day ready-to-wear exchanges' }}</NuxtLink>
+            </div>
+
             <!-- Collapsible Luxury Accordions -->
             <div class="border-t border-brand-border divide-y divide-brand-border pt-4">
               <!-- 1. Fabric & Product Details -->
               <div class="py-4">
                 <button
                   class="w-full flex items-center justify-between text-left"
+                  :aria-expanded="activeAccordions.details" aria-controls="pdp-details"
                   @click="toggleAccordion('details')"
                 >
                   <span class="font-serif text-sm font-semibold uppercase tracking-luxury text-brand-charcoal">
@@ -1067,13 +1086,13 @@ const productWhatsApp = computed(() => product.value
                     {{ activeAccordions.details ? '−' : '+' }}
                   </span>
                 </button>
-                <div v-show="activeAccordions.details" class="pt-3 text-xs text-brand-muted leading-relaxed space-y-2">
+                <div id="pdp-details" v-show="activeAccordions.details" class="pt-3 text-xs text-brand-muted leading-relaxed space-y-2">
                   <p>{{ product.description }}</p>
+                  <p v-if="product.fit_notes" class="whitespace-pre-line"><strong>Fit:</strong> {{ product.fit_notes }}</p>
                   <ul class="list-disc pl-4 space-y-1 text-brand-charcoal">
-                    <li><strong class="font-medium">Fabric:</strong> Pure {{ product.fabric_type }}</li>
-                    <li><strong class="font-medium">Silhouette:</strong> {{ product.piece_type }} Designer Set</li>
-                    <li><strong class="font-medium">Category:</strong> {{ product.category?.name }}</li>
-                    <li><strong class="font-medium">Finish:</strong> Delicate contrast piping & tailored seams</li>
+                    <li><strong class="font-medium">Fabric:</strong> {{ product.fabric_type }}</li>
+                    <li><strong class="font-medium">Pieces:</strong> {{ product.piece_type }}</li>
+                    <li v-if="product.category"><strong class="font-medium">Category:</strong> {{ product.category.name }}</li>
                   </ul>
                 </div>
               </div>
@@ -1082,6 +1101,7 @@ const productWhatsApp = computed(() => product.value
               <div class="py-4">
                 <button
                   class="w-full flex items-center justify-between text-left"
+                  :aria-expanded="activeAccordions.delivery" aria-controls="pdp-delivery"
                   @click="toggleAccordion('delivery')"
                 >
                   <span class="font-serif text-sm font-semibold uppercase tracking-luxury text-brand-charcoal">
@@ -1091,11 +1111,9 @@ const productWhatsApp = computed(() => product.value
                     {{ activeAccordions.delivery ? '−' : '+' }}
                   </span>
                 </button>
-                <div v-show="activeAccordions.delivery" class="pt-3 text-xs text-brand-muted leading-relaxed space-y-2">
-                  <p>• <strong class="text-brand-charcoal">Delivery Time:</strong> 3–5 working days nationwide across Pakistan.</p>
-                  <p>• <strong class="text-brand-charcoal">Free Shipping:</strong> Automatically applied to orders above Rs. 5,000.</p>
-                  <p>• <strong class="text-brand-charcoal">Exchanges:</strong> 7-day hassle-free exchange window for unworn ready-to-wear items with original tags intact.</p>
-                  <p>• <strong class="text-brand-charcoal">Custom Tailored Pieces:</strong> Made specifically to your measurement profile; requires 50% advance confirmation.</p>
+                <div id="pdp-delivery" v-show="activeAccordions.delivery" class="pt-3 text-xs text-brand-muted leading-relaxed space-y-2">
+                  <p>Check the <NuxtLink to="/policies/shipping" class="underline">delivery policy</NuxtLink> for estimated timing. Shipping and any tailoring advance are confirmed at checkout.</p>
+                  <p>See the <NuxtLink to="/policies/returns" class="underline">exchange policy</NuxtLink> for garment condition and custom-order eligibility.</p>
                 </div>
               </div>
 
@@ -1103,6 +1121,7 @@ const productWhatsApp = computed(() => product.value
               <div class="py-4">
                 <button
                   class="w-full flex items-center justify-between text-left"
+                  :aria-expanded="activeAccordions.care" aria-controls="pdp-care"
                   @click="toggleAccordion('care')"
                 >
                   <span class="font-serif text-sm font-semibold uppercase tracking-luxury text-brand-charcoal">
@@ -1112,11 +1131,9 @@ const productWhatsApp = computed(() => product.value
                     {{ activeAccordions.care ? '−' : '+' }}
                   </span>
                 </button>
-                <div v-show="activeAccordions.care" class="pt-3 text-xs text-brand-muted leading-relaxed space-y-1.5">
-                  <p>• Dry clean recommended for silk, chiffon, and embroidered organza.</p>
-                  <p>• Gentle hand wash in cold water using mild detergent for pure lawn & linen.</p>
-                  <p>• Do not wring or tumble dry; dry in shade to maintain color longevity.</p>
-                  <p>• Warm iron inside out.</p>
+                <div id="pdp-care" v-show="activeAccordions.care" class="pt-3 text-xs text-brand-muted leading-relaxed space-y-1.5">
+                  <p v-if="product.care_instructions" class="whitespace-pre-line">{{ product.care_instructions }}</p>
+                  <p v-else>Follow the care label supplied with the garment.</p>
                 </div>
               </div>
             </div>
@@ -1231,10 +1248,10 @@ const productWhatsApp = computed(() => product.value
             <form v-else class="space-y-4" @submit.prevent="submitReview">
               <!-- Rating Selector -->
               <div>
-                <label class="block text-xs uppercase tracking-luxury text-brand-charcoal font-medium mb-1.5">
+                <p id="rating-label" class="block text-xs uppercase tracking-luxury text-brand-charcoal font-medium mb-1.5">
                   Rating (1 to 5 Stars) *
-                </label>
-                <div class="flex items-center space-x-2">
+                </p>
+                <div role="group" aria-labelledby="rating-label" class="flex flex-wrap items-center gap-2">
                   <button
                     v-for="star in 5"
                     :key="star"
@@ -1261,11 +1278,11 @@ const productWhatsApp = computed(() => product.value
 
               <!-- Comment -->
               <div>
-                <label class="block text-[11px] uppercase tracking-luxury text-brand-charcoal font-medium mb-1">
+                <label for="review-comment" class="block text-[11px] uppercase tracking-luxury text-brand-charcoal font-medium mb-1">
                   Your Review / Fit Feedback *
                 </label>
                 <textarea
-                  v-model="reviewForm.comment"
+                  id="review-comment" v-model="reviewForm.comment"
                   rows="4"
                   required
                   placeholder="How did the fabric feel? How was the bespoke stitching, drape, and sizing? Share your honest thoughts..."
@@ -1275,14 +1292,14 @@ const productWhatsApp = computed(() => product.value
 
               <!-- Customer Photo Upload -->
               <div>
-                <label class="block text-[11px] uppercase tracking-luxury text-brand-charcoal font-medium mb-1">
+                <label for="review-photo" class="block text-[11px] uppercase tracking-luxury text-brand-charcoal font-medium mb-1">
                   Upload Fit Photo <span class="text-brand-muted lowercase text-[10px]">(optional, see your dress on our storefront)</span>
                 </label>
                 <div class="flex items-center space-x-4">
                   <input
-                    type="file"
+                    id="review-photo" type="file"
                     accept="image/jpeg,image/png,image/webp"
-                    class="text-xs text-brand-charcoal file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:uppercase file:tracking-luxury file:bg-brand-charcoal file:text-white hover:file:bg-brand-gold file:transition-colors file:cursor-pointer"
+                    class="min-w-0 max-w-full text-xs text-brand-charcoal file:mr-3 file:py-2 file:px-4 file:border-0 file:text-xs file:uppercase file:tracking-luxury file:bg-brand-charcoal file:text-white hover:file:bg-brand-gold file:transition-colors file:cursor-pointer"
                     @change="onPhotoSelected"
                   >
                   <div v-if="reviewPhotoPreview" class="relative w-12 h-16 border border-brand-border overflow-hidden">
@@ -1366,9 +1383,9 @@ const productWhatsApp = computed(() => product.value
               <div class="flex items-start justify-between mb-3">
                 <div>
                   <div class="flex items-center space-x-2">
-                    <h4 class="font-serif text-sm font-semibold text-brand-charcoal">
+                    <h3 class="font-serif text-sm font-semibold text-brand-charcoal">
                       {{ rev.reviewer_name }}
-                    </h4>
+                    </h3>
                     <span
                       v-if="rev.is_verified_purchase"
                       class="inline-flex items-center space-x-1 text-[9px] uppercase tracking-wider font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5"
@@ -1448,9 +1465,9 @@ const productWhatsApp = computed(() => product.value
             <span class="text-[10px] uppercase tracking-luxury text-brand-gold font-semibold block mb-1">
               Curated Complements
             </span>
-            <h3 class="font-serif text-2xl sm:text-3xl text-brand-charcoal">
+            <h2 class="font-serif text-2xl sm:text-3xl text-brand-charcoal">
               You May Also Like
-            </h3>
+            </h2>
           </div>
           <NuxtLink
             to="/shop"
@@ -1477,9 +1494,9 @@ const productWhatsApp = computed(() => product.value
     </div>
 
     <!-- Mobile Sticky Bottom Action Bar -->
-    <div class="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-brand-border p-3 z-30 flex items-center gap-2 shadow-2xl">
+    <div v-if="!pending && product && !error && (colorSizes.length || customVariant)" class="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-brand-border p-3 z-30 flex items-center gap-2 shadow-2xl">
       <div class="flex-1">
-        <p class="text-[10px] uppercase text-brand-muted leading-none">Total</p>
+        <p class="text-xs text-brand-muted leading-none">{{ isCustomFit ? 'Custom fit' : selectedSize ? `Size ${selectedSize}` : 'Select a size' }}</p>
         <p class="font-serif text-base font-bold text-brand-charcoal leading-tight">
           {{ formatPrice(finalUnitPrice) }}
         </p>
@@ -1498,10 +1515,8 @@ const productWhatsApp = computed(() => product.value
         class="flex-1 py-3 bg-brand-charcoal text-white text-xs uppercase tracking-luxury font-medium"
         @click="handleAddToCart"
       >
-        Add to Bag
+        {{ activeVariant ? 'Add to Bag' : 'Choose a size' }}
       </button>
-
-
     </div>
 
     <!-- Size Guide Modal -->
@@ -1539,19 +1554,20 @@ const productWhatsApp = computed(() => product.value
           </button>
 
           <!-- Modal Title -->
-          <div class="flex items-center justify-between border-b border-brand-border pb-4 mb-6">
+          <div class="flex flex-wrap items-center gap-3 border-b border-brand-border pb-4 mb-6 pr-6">
             <div>
               <h2 id="size-guide-title" class="font-serif text-xl sm:text-2xl font-bold uppercase tracking-luxury text-brand-charcoal">
                 Size Guide
               </h2>
-              <p class="text-xs text-brand-muted">Standard Pakistani Ready-to-Wear Sizing</p>
+              <p class="text-sm text-brand-muted">{{ product?.name }}</p>
             </div>
 
             <!-- Unit switch -->
-            <div class="flex border border-brand-border bg-white text-xs mr-6">
+            <div v-if="sizeChart.length" class="flex border border-brand-border bg-white text-xs">
               <button
                 class="px-3 py-1 font-medium transition-colors"
                 :class="[sizeGuideUnit === 'inches' ? 'bg-brand-charcoal text-white' : 'text-brand-charcoal hover:bg-brand-cream']"
+                :aria-pressed="sizeGuideUnit === 'inches'"
                 @click="sizeGuideUnit = 'inches'"
               >
                 Inches
@@ -1559,6 +1575,7 @@ const productWhatsApp = computed(() => product.value
               <button
                 class="px-3 py-1 font-medium transition-colors"
                 :class="[sizeGuideUnit === 'cm' ? 'bg-brand-charcoal text-white' : 'text-brand-charcoal hover:bg-brand-cream']"
+                :aria-pressed="sizeGuideUnit === 'cm'"
                 @click="sizeGuideUnit = 'cm'"
               >
                 CM
@@ -1566,46 +1583,41 @@ const productWhatsApp = computed(() => product.value
             </div>
           </div>
 
-          <!-- Measurement Table -->
-          <div class="overflow-x-auto mb-6">
-            <table class="w-full text-xs text-left">
-              <thead>
-                <tr class="border-b border-brand-border text-[10px] uppercase tracking-luxury text-brand-muted bg-brand-cream/50">
-                  <th class="py-2.5 px-3">Size</th>
-                  <th class="py-2.5 px-3">Chest</th>
-                  <th class="py-2.5 px-3">Waist</th>
-                  <th class="py-2.5 px-3">Hips</th>
-                  <th class="py-2.5 px-3">Shoulder</th>
-                  <th class="py-2.5 px-3">Shirt Length</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-brand-border">
-                <tr
-                  v-for="row in sizeChart"
-                  :key="row.size"
-                  class="hover:bg-brand-cream/30"
-                >
-                  <td class="py-3 px-3 font-bold text-brand-charcoal">{{ row.size }}</td>
-                  <td class="py-3 px-3 text-brand-muted">{{ row.chest }}</td>
-                  <td class="py-3 px-3 text-brand-muted">{{ row.waist }}</td>
-                  <td class="py-3 px-3 text-brand-muted">{{ row.hips }}</td>
-                  <td class="py-3 px-3 text-brand-muted">{{ row.shoulder }}</td>
-                  <td class="py-3 px-3 text-brand-muted">{{ row.length }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- How to Measure Tip -->
-          <div class="bg-brand-cream/50 border border-brand-border p-4 text-xs text-brand-muted space-y-1.5">
-            <h4 class="font-serif font-bold text-brand-charcoal uppercase tracking-wider text-[11px]">
-              How to Measure
-            </h4>
-            <p>• <strong class="text-brand-charcoal">Chest / Bust:</strong> Measure across the fullest part of your chest, keeping the tape horizontal.</p>
-            <p>• <strong class="text-brand-charcoal">Waist:</strong> Measure around your natural waistline, keeping tape comfortably loose.</p>
-            <p>• <strong class="text-brand-charcoal">Hips:</strong> Measure around the fullest part of your hips.</p>
-            <p>• For tailored perfection, toggle our <strong class="text-brand-gold">Bespoke Custom Fit</strong> to enter your exact measurements.</p>
-          </div>
+          <p v-if="!sizeChart.length" class="mb-4 text-sm text-brand-muted">
+            A verified size chart is not available for this item yet.
+            <a v-if="productWhatsApp" :href="productWhatsApp" target="_blank" rel="noopener noreferrer" class="underline">Ask the store for measurements</a>
+            <NuxtLink v-else to="/faq" class="underline">See fit and support FAQs</NuxtLink>.
+          </p>
+          <template v-else>
+            <p id="chart-measurement-type" class="mb-3 text-sm text-brand-muted">
+              {{ product?.size_chart_type === 'garment'
+                ? 'Finished garment measurements. Compare with a similar garment that fits you. The bust, waist and hip figures are full circumferences, not flat widths.'
+                : 'Recommended body measurements. Measure around your body, not the garment.' }}
+            </p>
+            <div class="overflow-x-auto mb-4" tabindex="0" role="region" aria-label="Size measurements">
+              <table aria-describedby="chart-measurement-type" class="w-full text-xs text-left">
+                <thead>
+                  <tr class="border-b border-brand-border text-xs text-brand-charcoal bg-brand-cream/50">
+                    <th scope="col" class="p-2">Size</th>
+                    <th scope="col" class="p-2">Bust</th>
+                    <th scope="col" class="p-2">Waist</th>
+                    <th scope="col" class="p-2">Hips</th>
+                    <th scope="col" class="p-2">Shirt length</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-brand-border">
+                  <tr v-for="row in sizeChart" :key="row.size">
+                    <th scope="row" class="p-2 text-brand-charcoal">{{ row.size }}</th>
+                    <td class="p-2">{{ chartMeasurement(row.bust) }}</td>
+                    <td class="p-2">{{ chartMeasurement(row.waist) }}</td>
+                    <td class="p-2">{{ chartMeasurement(row.hips) }}</td>
+                    <td class="p-2">{{ chartMeasurement(row.length) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+          <p v-if="product?.fit_notes" class="whitespace-pre-line text-sm"><strong>Fit notes:</strong> {{ product.fit_notes }}</p>
         </div>
       </div>
     </Transition>

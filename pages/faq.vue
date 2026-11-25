@@ -3,7 +3,7 @@ const { whatsapp, emailHref } = useStoreContact()
 const chatUrl = computed(() => whatsapp('Hello K. Fabrics, I have a question about your collection.'))
 useSeoMeta({
   title: 'Frequently Asked Questions & Support | K. Fabrics Pakistan',
-  description: 'Everything you need to know about bespoke stitching, measurement profiles, Cash on Delivery, rider pickup, and exchange policies at K. Fabrics.',
+  description: 'Everything you need to know about bespoke stitching, measurement profiles, Cash on Delivery, courier handover, and exchange policies at K. Fabrics.',
   ogTitle: 'FAQs & Concierge Support | K. Fabrics Minimalist Luxury',
   ogDescription: 'Instant answers on custom tailoring, sizing, COD rules, and order delivery across Pakistan.',
 })
@@ -30,19 +30,19 @@ const faqs: FaqItem[] = [
     id: 'stitching-2',
     category: 'stitching',
     question: 'Can I send you my own unstitched fabric from another brand?',
-    answer: 'Yes! Through our Standalone Stitching wizard (/stitching), you can commission our atelier to tailor your own unstitched 2-piece or 3-piece suits. You can either drop the fabric at our Lahore studio or opt for our Rider Pickup service in major cities (Lahore, Karachi, Islamabad, Faisalabad).',
+    answer: 'Yes! Through our Standalone Stitching wizard (/stitching), you can commission our atelier to tailor your own unstitched 2-piece or 3-piece suits. Book online, then wait for the atelier to confirm the address and send your fabric by courier. Rider pickup and studio drop-off are not available through online booking.',
   },
   {
     id: 'stitching-3',
     category: 'stitching',
     question: 'What if I don\'t know my exact body measurements?',
-    answer: 'You have two easy choices: you can refer to our Size Guide on any product page with instructions on using a measuring tape, or choose "Send Sample Fitting Suit" during stitching checkout. Our courier rider will pick up your best-fitting kurti, our master cutter will duplicate its measurements, and we will return your sample safely with your finished order.',
+    answer: 'You have two easy choices: you can refer to our Size Guide on any product page with instructions on using a measuring tape, or choose "Send Sample Fitting Suit" during stitching checkout. Courier your fitted shirt and trousers with the unstitched fabric after the atelier confirms the address. The team will measure the samples and return them with your finished order.',
   },
   {
     id: 'stitching-4',
     category: 'stitching',
     question: 'Can I save multiple measurement profiles in my customer account?',
-    answer: 'Absolutely. Registered customers can save and name multiple profiles (e.g. "Formal Fitted", "Summer Relaxed", "Mom\'s Measurements") in their Customer Dashboard under Saved Measurements for one-click reuse at checkout.',
+    answer: 'Absolutely. Registered customers can save and name multiple profiles (e.g. "Formal Fitted", "Summer Relaxed", "Mom\'s Measurements") in their Customer Dashboard under Saved Measurements to load into the fitting or stitching form. Filling a form does not automatically save new or edited measurements to your account.',
   },
 
   // Orders & Shipping
@@ -118,7 +118,7 @@ const toggleFaq = (id: string) => {
         Frequently Asked Questions
       </h1>
       <p class="text-xs sm:text-sm text-brand-muted mt-4 max-w-xl mx-auto font-light leading-relaxed">
-        Have questions about custom fitting, COD delivery timelines, or sample pickup? Find instant answers below.
+        Have questions about custom fitting, COD delivery timelines, or sending a fitting sample? Find instant answers below.
       </p>
 
       <!-- Category Filter Tabs -->

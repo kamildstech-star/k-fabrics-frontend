@@ -30,3 +30,9 @@ npm audit --omit=dev
 - Payment availability comes from the API. Do not place merchant account details or provider secrets in storefront source or public runtime configuration.
 - Staging sign-off: verify browsing and sorting, stock changes at checkout, custom fitting totals, multiple tailoring bookings, retry without double ordering, sign-in/logout, and status-only guest tracking. Confirm tracking secrets never enter URL parameters or analytics. Test on a narrow viewport with keyboard navigation and confirm image optimization on the production runtime.
 - Keep unattended recovery campaigns and unfinished catalog add-ons off until the backend contracts and customer controls have been implemented and verified.
+
+### Catalog content before launch
+
+Replace demo photography with the actual garments: front, back, fabric detail and an accurate on-model view where available. Set `NUXT_PUBLIC_HERO_IMAGE` to an approved local asset path or public HTTPS image for the current collection. In the admin, attach image descriptions and verified article-specific fit, sizing and care data. Missing charts are shown as unavailable; the storefront does not substitute made-up measurements. The local placeholder is for failures, not a replacement for product photography.
+
+Tailoring forms and carts warn before closing or refreshing when they contain unsubmitted private details. Measurements, notes and reference photos are not stored in the browser; signed-in customers can reapply their saved measurement profiles, but the unsent booking is not restored automatically. Checkout lets the customer download or print the private receipt before leaving.

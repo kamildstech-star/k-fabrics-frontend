@@ -241,7 +241,18 @@ const placeOrder = async () => {
   try {
     const response = await auth.apiFetch<{ data: PlacedOrder }>('/orders', { method: 'POST', body: form, headers, retry: false })
     if (!response.data?.order_number) throw new Error('No order receipt returned')
-    pendingOrder.value = response.data
+    const received = response.data
+    pendingOrder.value = {
+      order_number: received.order_number,
+      payment_method: received.payment_method,
+      payment_status: received.payment_status,
+      total_amount: received.total_amount,
+      advance_due: received.advance_due,
+      payment_instructions: received.payment_instructions,
+      tracking_token: received.tracking_token,
+      receipt: received.receipt,
+    }
+    Object.assign(customer, { customer_name: '', customer_phone: '', customer_email: '', shipping_address: '', city: '', notes: '' })
     cart.clearCart()
     submission = undefined
     retryWithSameDetails.value = false
@@ -365,6 +376,7 @@ onBeforeUnmount(() => {
           <button type="button" class="outline-action" @click="copyTrackingCode">Copy tracking code</button>
           <p aria-live="polite">{{ copyMessage }}</p>
         </div>
+        <OrderReceiptActions v-if="pendingOrder.receipt" :receipt="pendingOrder.receipt" :tracking-code="pendingOrder.tracking_token" />
         <button v-if="pendingOrder.tracking_token" type="button" class="block w-fit primary-action" @click="openTracking">Track order status</button>
         <NuxtLink v-else to="/track-order" class="block w-fit primary-action">Track order status</NuxtLink>
       </section>
@@ -375,9 +387,23 @@ onBeforeUnmount(() => {
         <NuxtLink to="/shop" class="inline-block primary-action">Explore the collection</NuxtLink>
       </section>
 
-      <form v-else class="grid grid-cols-1 lg:grid-cols-12 gap-12" @submit.prevent="placeOrder">
+      <form v-else class="grid grid-cols-1 lg:grid-cols-12 gap-7 lg:gap-12" @submit.prevent="placeOrder">
         <div class="lg:col-span-7 space-y-8">
           <h1 class="font-serif text-3xl font-bold">Checkout &amp; delivery</h1>
+          <div class="lg:hidden border border-brand-border bg-brand-cream/40 p-4 space-y-2">
+            <div aria-live="polite" aria-atomic="true">
+              <dl v-if="quote && !quoteLoading" class="space-y-1 text-sm">
+                <div class="flex flex-wrap justify-between gap-x-4 gap-y-1 text-base font-semibold">
+                  <dt>Order total</dt><dd>{{ formatPrice(quote.total_amount) }}</dd>
+                </div>
+                <div v-if="quote.requires_deposit" class="flex flex-wrap justify-between gap-x-4 gap-y-1">
+                  <dt>Tailoring advance</dt><dd class="font-semibold">{{ formatPrice(quote.advance_due) }}</dd>
+                </div>
+              </dl>
+              <p v-else class="text-sm">{{ quoteError ? 'Order total unavailable' : 'Checking your order total…' }}</p>
+            </div>
+            <a href="#order-summary" class="inline-block py-1 text-sm underline underline-offset-4">View items, shipping and discounts</a>
+          </div>
           <fieldset class="space-y-4" :disabled="submitting || retryWithSameDetails">
             <legend class="font-serif font-bold mb-3">1. Contact and delivery details</legend>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -416,11 +442,11 @@ onBeforeUnmount(() => {
           </section>
         </div>
 
-        <section class="lg:col-span-5 space-y-4 border border-brand-border bg-brand-cream/40 p-5 sm:p-7 self-start" aria-labelledby="order-summary">
-          <h2 id="order-summary" class="font-serif text-xl font-bold">Order summary ({{ itemCount }})</h2>
+        <section class="min-w-0 lg:col-span-5 space-y-4 border border-brand-border bg-brand-cream/40 p-4 sm:p-7 self-start" aria-labelledby="order-summary">
+          <h2 id="order-summary" tabindex="-1" class="scroll-mt-28 font-serif text-xl font-bold">Order summary ({{ itemCount }})</h2>
           <ul class="divide-y divide-brand-border">
-            <li v-for="item in cart.items" :key="item.id" class="flex justify-between gap-3 py-2">
-              <div class="min-w-0">
+            <li v-for="item in cart.items" :key="item.id" class="flex flex-wrap justify-between gap-3 py-2">
+              <div class="min-w-0 break-words">
                 {{ item.name }}<span v-if="item.size"> · {{ item.size }}</span> × {{ item.quantity }}
               </div>
               <span v-if="quotedLines.has(item.id)" class="shrink-0">{{ formatPrice(quotedLines.get(item.id)!) }}</span>
@@ -429,7 +455,7 @@ onBeforeUnmount(() => {
           </ul>
 
           <div class="space-y-2 border-t border-brand-border pt-3">
-            <div v-if="appliedCoupon" class="flex items-center justify-between gap-2">
+            <div v-if="appliedCoupon" class="flex flex-wrap items-center justify-between gap-2">
               <span>Promo code: <strong>{{ appliedCoupon }}</strong></span>
               <button type="button" class="outline-action" :disabled="quoteLoading || submitting || retryWithSameDetails" @click="removeCoupon">Remove promo code</button>
             </div>

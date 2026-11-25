@@ -1,13 +1,13 @@
 import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
-import { checkoutCart, convertMeasurements, formatPrice, measurementPayload, orderForm, requestKey } from '../utils/checkout.ts'
+import { checkoutCart, convertMeasurements, formatPrice, measurementPayload, orderForm, requestKey, requiredMeasurementLabels } from '../utils/checkout.ts'
 import { standardCartItems } from '../utils/cart-privacy.ts'
 
 const kurta = { id: 'ready', type: 'product', name: 'Lawn Kurta', productId: 11, variantId: 22, price: 3900, quantity: 1 }
 const custom = { ...kurta, id: 'tailored', variantId: 23, customFitting: { unit: 'inches', chest: 37, special_instructions: 'Loose fit' } }
 const reference = 'data:image/png;base64,iVBORw0KGgo='
-const firstBooking = { id: 'booking-1', type: 'stitching', name: 'Basic tailoring', serviceId: 32, price: 500, quantity: 1 }
-const secondBooking = { id: 'booking-2', type: 'stitching', name: 'Bespoke tailoring', serviceId: 33, price: 1250, quantity: 1, designReferenceImage: reference, neckStyle: 'Boat neck', measurements: { unit: 'cm', chest: 91, neck_style: 'Do not duplicate' } }
+const firstBooking = { id: 'booking-1', type: 'stitching', name: 'Basic tailoring', measurementMethod: 'sample', serviceId: 32, price: 500, quantity: 1 }
+const secondBooking = { id: 'booking-2', type: 'stitching', name: 'Bespoke tailoring', measurementMethod: 'manual', serviceId: 33, price: 1250, quantity: 1, designReferenceImage: reference, neckStyle: 'Boat neck', measurements: { unit: 'cm', chest: 91, neck_style: 'Do not duplicate' } }
 const customer = { customer_name: 'Test Customer', customer_phone: '03000000000', customer_email: '', shipping_address: ' Test address ', city: 'Lahore', payment_method: 'cod', notes: '' }
 
 test('authoritative quote sends ids, quantities, measurements and coupon, not prices or uploads', () => {
@@ -20,6 +20,10 @@ test('authoritative quote sends ids, quantities, measurements and coupon, not pr
   assert.deepEqual(body.standalone_stitchings.map(item => item.stitching_service_id), [32, 33])
   assert.deepEqual(body.standalone_stitchings[1].measurements, { unit: 'cm', chest: 91 })
   assert.equal(body.standalone_stitchings[1].neck_style, 'Boat neck')
+  assert.equal(body.standalone_stitchings[0].measurement_method, 'sample')
+  assert.equal(body.standalone_stitchings[0].measurements, null)
+  assert.equal(body.standalone_stitchings[1].measurement_method, 'manual')
+  assert.equal(body.standalone_stitchings[1].fabric_delivery_method, 'courier_by_customer')
   assert.equal(body.coupon_code, 'FIRST')
   assert.doesNotMatch(JSON.stringify(body), /price|design_reference|customer_phone/)
 })
@@ -61,6 +65,15 @@ test('browser storage preserves ordinary products only and scrubs earlier sensit
 test('measurement sanitization drops blank strings and rejects nonpositive values', () => {
   assert.deepEqual(measurementPayload({ unit: 'inches', chest: '  ', waist: 27.5 }), { unit: 'inches', waist: 27.5 })
   assert.throws(() => measurementPayload({ unit: 'inches', chest: -1 }), /0\.01 and 300/)
+})
+
+test('top-only fitting does not ask for trousers and a full package requires both', () => {
+  const shirt = { unit: 'inches', shirt_length: 40, shoulder: 14.5, chest: 37, waist: 32, hips: 39, sleeve_length: 21 }
+  assert.deepEqual(requiredMeasurementLabels(shirt, false), [])
+  assert.deepEqual(requiredMeasurementLabels(shirt), ['trouser length', 'trouser waist'])
+  const complete = { ...shirt, trouser_length: 38, trouser_waist: 31 }
+  assert.deepEqual(requiredMeasurementLabels(complete), [])
+  assert.deepEqual(requiredMeasurementLabels({ ...complete, chest: -1 }), ['chest/bust'])
 })
 
 test('switching measurement units converts values instead of relabelling them', () => {

@@ -23,6 +23,7 @@ export default defineNuxtConfig({
       siteUrl: 'https://kfabrics.com',
       supportEmail: '',
       supportWhatsapp: '',
+      heroImage: '',
     },
   },
 
@@ -34,6 +35,7 @@ export default defineNuxtConfig({
 
   app: {
     head: {
+      htmlAttrs: { lang: 'en-PK' },
       title: 'K. Fabrics | Minimalist Luxury Ladies Clothing & Custom Fitting',
       meta: [
         { charset: 'utf-8' },

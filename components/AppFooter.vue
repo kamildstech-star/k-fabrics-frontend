@@ -17,15 +17,15 @@ const chatUrl = computed(() => whatsapp('Hello K. Fabrics, I have a question abo
             Minimalist luxury ready-to-wear ladies clothing and bespoke custom tailoring. Crafted with fine organic lawn, linen, and silk for the modern silhouette.
           </p>
           <div class="pt-2 text-xs text-brand-charcoal font-medium">
-            <span class="text-brand-gold mr-1">●</span> Nationwide Delivery Across Pakistan
+            <span class="text-brand-gold-decoration mr-1" aria-hidden="true">●</span> Nationwide Delivery Across Pakistan
           </div>
         </div>
 
         <!-- Col 2: Collections -->
         <div>
-          <h4 class="font-serif text-sm font-semibold uppercase tracking-luxury text-brand-charcoal mb-4">
+          <h2 class="font-serif text-sm font-semibold uppercase tracking-luxury text-brand-charcoal mb-4">
             Collections
-          </h4>
+          </h2>
           <ul class="space-y-2.5 text-xs text-brand-muted uppercase tracking-wider">
             <li>
               <NuxtLink to="/shop?sort=newest" class="hover:text-brand-charcoal transition-colors">
@@ -57,9 +57,9 @@ const chatUrl = computed(() => whatsapp('Hello K. Fabrics, I have a question abo
 
         <!-- Col 3: Customer Care -->
         <div>
-          <h4 class="font-serif text-sm font-semibold uppercase tracking-luxury text-brand-charcoal mb-4">
+          <h2 class="font-serif text-sm font-semibold uppercase tracking-luxury text-brand-charcoal mb-4">
             Customer Care
-          </h4>
+          </h2>
           <ul class="space-y-2.5 text-xs text-brand-muted uppercase tracking-wider">
             <li>
               <NuxtLink to="/track-order" class="hover:text-brand-charcoal transition-colors">
@@ -91,9 +91,9 @@ const chatUrl = computed(() => whatsapp('Hello K. Fabrics, I have a question abo
 
         <!-- Col 4: Atelier & Support -->
         <div>
-          <h4 class="font-serif text-sm font-semibold uppercase tracking-luxury text-brand-charcoal mb-4">
+          <h2 class="font-serif text-sm font-semibold uppercase tracking-luxury text-brand-charcoal mb-4">
             Concierge & Atelier
-          </h4>
+          </h2>
           <div class="space-y-3 text-xs text-brand-muted">
             <p>
               <strong class="text-brand-charcoal">Design Studio:</strong><br>
@@ -109,7 +109,7 @@ const chatUrl = computed(() => whatsapp('Hello K. Fabrics, I have a question abo
               </a>
             </p>
             <p v-if="emailHref">
-              <a :href="emailHref" class="text-brand-gold font-medium hover:underline">{{ email }}</a>
+              <a :href="emailHref" class="break-all text-brand-gold font-medium hover:underline">{{ email }}</a>
             </p>
           </div>
         </div>
@@ -118,7 +118,7 @@ const chatUrl = computed(() => whatsapp('Hello K. Fabrics, I have a question abo
       <!-- Bottom Credits -->
       <div class="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-brand-muted space-y-4 sm:space-y-0">
         <p>© 2026 K. Fabrics. All rights reserved.</p>
-        <div class="flex space-x-6 uppercase tracking-wider text-[10px]">
+        <div class="flex flex-wrap justify-center gap-x-5 gap-y-2 text-[10px] uppercase tracking-wider">
           <NuxtLink to="/policies/privacy" class="hover:text-brand-charcoal transition-colors">
             Privacy Policy & Terms
           </NuxtLink>
@@ -138,7 +138,7 @@ const chatUrl = computed(() => whatsapp('Hello K. Fabrics, I have a question abo
       :href="chatUrl"
       target="_blank"
       rel="noopener noreferrer"
-      class="fixed bottom-6 right-6 z-40 bg-[#25D366] text-white p-3.5 rounded-full shadow-xl hover:scale-105 transition-all duration-300 flex items-center justify-center group"
+      class="fixed bottom-6 right-6 z-40 bg-[#08783D] text-white p-3.5 rounded-full shadow-xl hover:scale-105 transition-all duration-300 flex items-center justify-center group"
       aria-label="Chat on WhatsApp with K. Fabrics concierge"
     >
       <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">

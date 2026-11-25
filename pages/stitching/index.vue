@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useCartStore, type CustomFittingMeasurements } from '~/stores/cart'
 import { useAuthStore } from '~/stores/auth'
-import { convertMeasurements, hasNumericMeasurements, measurementPayload } from '~/utils/checkout'
+import { convertMeasurements, hasNumericMeasurements, measurementPayload, requiredMeasurementLabels } from '~/utils/checkout'
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
@@ -46,8 +46,10 @@ const applySavedProfile = (profileId: number) => {
   if (profile.extra_notes) specialInstructions.value = profile.extra_notes
 }
 
+type StitchingService = { id: number; name: string; description: string; base_price: number; estimated_days: number }
+
 // Fetch active stitching services from backend API
-const { data: servicesResponse, pending: servicesPending } = await useFetch<any>(
+const { data: servicesResponse, pending: servicesPending } = await useFetch<{ data: StitchingService[] }>(
   `${apiBase}/stitching-services`,
   { lazy: false }
 )
@@ -67,17 +69,18 @@ const selectedServiceDays = ref(7)
 watch(
   services,
   (list) => {
-    if (list?.length && !selectedServiceId.value) {
-      selectedServiceId.value = list[0].id
-      selectedServiceName.value = list[0].name
-      selectedServicePrice.value = list[0].base_price
-      selectedServiceDays.value = list[0].estimated_days
+    const first = list[0]
+    if (first && !selectedServiceId.value) {
+      selectedServiceId.value = first.id
+      selectedServiceName.value = first.name
+      selectedServicePrice.value = first.base_price
+      selectedServiceDays.value = first.estimated_days
     }
   },
   { immediate: true }
 )
 
-const selectService = (service: any) => {
+const selectService = (service: StitchingService) => {
   selectedServiceId.value = service.id
   selectedServiceName.value = service.name
   selectedServicePrice.value = service.base_price
@@ -119,6 +122,7 @@ const specialInstructions = ref('')
 const designReferencePreview = ref<string | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const referenceError = ref('')
+const referenceLoading = ref(false)
 let referenceRead = 0
 
 const handleFileUpload = (event: Event) => {
@@ -127,17 +131,22 @@ const handleFileUpload = (event: Event) => {
   if (!file) return
   const read = ++referenceRead
   referenceError.value = ''
+  referenceLoading.value = false
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
     referenceError.value = 'Choose a JPEG, PNG or WebP image up to 5 MB.'
     target.value = ''
     return
   }
   const reader = new FileReader()
+  referenceLoading.value = true
   reader.onload = () => {
     if (read === referenceRead && typeof reader.result === 'string') designReferencePreview.value = reader.result
   }
   reader.onerror = () => {
     if (read === referenceRead) referenceError.value = 'Could not read this image. Try another file.'
+  }
+  reader.onloadend = () => {
+    if (read === referenceRead) referenceLoading.value = false
   }
   reader.readAsDataURL(file)
 }
@@ -149,6 +158,7 @@ const triggerFileInput = () => {
 const removeReferenceImage = () => {
   ++referenceRead
   referenceError.value = ''
+  referenceLoading.value = false
   designReferencePreview.value = null
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
@@ -176,18 +186,18 @@ const manualMeasurements = reactive<CustomFittingMeasurements>({
 
 watch(measurementUnit, unit => convertMeasurements(manualMeasurements, unit), { flush: 'sync' })
 
-// Step 3: Fabric Handover Method
-const fabricDeliveryMethod = 'courier_by_customer'
-
 // Validation before step transition
-const step1Valid = computed(() => selectedServiceId.value !== null)
+const step1Valid = computed(() => selectedServiceId.value !== null && !referenceLoading.value)
 const measurementError = ref('')
 const checkMeasurements = () => {
   measurementError.value = ''
   if (measurementMode.value === 'sample') return true
   try {
     const details = measurementPayload(manualMeasurements)
-    if (!details || !hasNumericMeasurements(details)) throw new Error('Enter a measurement, or choose to send a sample garment instead.')
+    const missing = requiredMeasurementLabels(details)
+    if (missing.length) {
+      throw new Error(`Enter ${missing.join(', ')}, or choose to send a fitted shirt and trousers by courier.`)
+    }
     return true
   } catch (error) {
     measurementError.value = error instanceof Error ? error.message : 'Check the measurements you entered.'
@@ -204,6 +214,38 @@ const goToStep = (step: number) => {
   }
 }
 
+const wizardDirty = computed(() =>
+  currentStep.value > 1 || selectedServiceId.value !== (services.value[0]?.id ?? null)
+  || neckStyle.value !== neckStyles[0] || sleeveStyle.value !== sleeveStyles[0]
+  || trouserStyle.value !== trouserStyles[0] || specialInstructions.value.length > 0
+  || referenceLoading.value || designReferencePreview.value !== null || hasNumericMeasurements(manualMeasurements),
+)
+useTailoringUnloadWarning(() => wizardDirty.value)
+onBeforeRouteLeave(() => {
+  if (wizardDirty.value && import.meta.client) {
+    return window.confirm('Leave this unfinished booking? Measurements and reference photos that are not in your bag will be cleared.')
+  }
+})
+
+function resetWizard() {
+  currentStep.value = 1
+  measurementMode.value = 'manual'
+  measurementUnit.value = 'inches'
+  for (const key of Object.keys(manualMeasurements) as Array<keyof CustomFittingMeasurements>) {
+    if (key !== 'unit') {
+      Object.assign(manualMeasurements, { [key]: null })
+    }
+  }
+  selectedSavedProfileId.value = null
+  if (services.value[0]) selectService(services.value[0])
+  neckStyle.value = neckStyles[0]
+  sleeveStyle.value = sleeveStyles[0]
+  trouserStyle.value = trouserStyles[0]
+  specialInstructions.value = ''
+  removeReferenceImage()
+  measurementError.value = ''
+}
+
 // Formatting
 const formatPrice = (val: number) => 'Rs. ' + Number(val).toLocaleString('en-PK')
 
@@ -211,30 +253,23 @@ const formatPrice = (val: number) => 'Rs. ' + Number(val).toLocaleString('en-PK'
 const finalizeBooking = (proceedToCheckout = false) => {
   if (!selectedServiceId.value || !checkMeasurements()) return
 
-  const measurementsPayload: CustomFittingMeasurements | null =
-    measurementMode.value === 'manual'
-      ? {
-          ...manualMeasurements,
-        }
-      : null
+  const measurementsPayload = measurementMode.value === 'manual' ? measurementPayload(manualMeasurements) : null
 
   cart.addStitchingService({
     serviceId: selectedServiceId.value,
     serviceName: selectedServiceName.value,
     price: selectedServicePrice.value,
     estimatedDays: selectedServiceDays.value,
-    fabricDeliveryMethod,
+    measurementMethod: measurementMode.value,
     designReferenceImage: designReferencePreview.value,
     neckStyle: neckStyle.value,
     sleeveStyle: sleeveStyle.value,
     trouserStyle: trouserStyle.value,
-    specialInstructions:
-      measurementMode.value === 'sample'
-        ? `[SENDING SAMPLE SUIT] ${specialInstructions.value}`.trim()
-        : specialInstructions.value,
+    specialInstructions: specialInstructions.value,
     measurements: measurementsPayload,
   })
 
+  resetWizard()
   if (proceedToCheckout) {
     cart.closeCart()
     router.push('/checkout')
@@ -254,7 +289,11 @@ const finalizeBooking = (proceedToCheckout = false) => {
           Bespoke Stitching Atelier
         </h1>
         <p class="text-xs text-brand-muted mt-2 font-light leading-relaxed">
-          Send your unstitched lawn, linen, or luxury silk from any brand. Our master tailors craft garments to your precise measurements.
+          Book tailoring for your own unstitched fabric. Send it by courier after the atelier confirms where and when to ship it.
+        </p>
+        <p class="mt-3 text-xs leading-relaxed text-brand-charcoal">
+          To protect your privacy, unfinished measurements and reference photos stay in this tab. Finish checkout before refreshing or closing it.
+          Signed-in customers can reload a measurement profile they have saved in their account.
         </p>
       </div>
 
@@ -455,10 +494,11 @@ const finalizeBooking = (proceedToCheckout = false) => {
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Neckline -->
             <div>
-              <label class="text-xs uppercase tracking-luxury text-brand-charcoal font-semibold block mb-2">
+              <label for="stitch-neckline-style" class="text-xs uppercase tracking-luxury text-brand-charcoal font-semibold block mb-2">
                 Neckline Style
               </label>
               <select
+                id="stitch-neckline-style"
                 v-model="neckStyle"
                 class="w-full bg-white border border-brand-border px-3 py-2.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
               >
@@ -470,10 +510,11 @@ const finalizeBooking = (proceedToCheckout = false) => {
 
             <!-- Sleeve Style -->
             <div>
-              <label class="text-xs uppercase tracking-luxury text-brand-charcoal font-semibold block mb-2">
+              <label for="stitch-sleeve-style" class="text-xs uppercase tracking-luxury text-brand-charcoal font-semibold block mb-2">
                 Sleeve Styling
               </label>
               <select
+                id="stitch-sleeve-style"
                 v-model="sleeveStyle"
                 class="w-full bg-white border border-brand-border px-3 py-2.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
               >
@@ -485,10 +526,11 @@ const finalizeBooking = (proceedToCheckout = false) => {
 
             <!-- Trouser Style -->
             <div>
-              <label class="text-xs uppercase tracking-luxury text-brand-charcoal font-semibold block mb-2">
+              <label for="stitch-trouser-style" class="text-xs uppercase tracking-luxury text-brand-charcoal font-semibold block mb-2">
                 Trouser Cut
               </label>
               <select
+                id="stitch-trouser-style"
                 v-model="trouserStyle"
                 class="w-full bg-white border border-brand-border px-3 py-2.5 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
               >
@@ -501,10 +543,11 @@ const finalizeBooking = (proceedToCheckout = false) => {
 
           <!-- Special Tailor Instructions -->
           <div>
-            <label class="text-xs uppercase tracking-luxury text-brand-charcoal font-semibold block mb-2">
+            <label for="stitch-instructions" class="text-xs uppercase tracking-luxury text-brand-charcoal font-semibold block mb-2">
               Tailor Instructions & Custom Details
             </label>
             <textarea
+              id="stitch-instructions"
               v-model="specialInstructions"
               maxlength="930"
               rows="3"
@@ -537,6 +580,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 ? 'border-brand-charcoal text-brand-charcoal'
                 : 'border-transparent text-brand-muted hover:text-brand-charcoal'
             ]"
+            :aria-pressed="measurementMode === 'manual'"
             @click="measurementMode = 'manual'"
           >
             Enter Measurements Online
@@ -548,6 +592,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 ? 'border-brand-charcoal text-brand-charcoal'
                 : 'border-transparent text-brand-muted hover:text-brand-charcoal'
             ]"
+            :aria-pressed="measurementMode === 'sample'"
             @click="measurementMode = 'sample'"
           >
             Send Physical Sample Suit
@@ -556,13 +601,15 @@ const finalizeBooking = (proceedToCheckout = false) => {
 
         <!-- Tab A: Manual Measurements Form -->
         <div v-if="measurementMode === 'manual'" class="space-y-8">
+          <p class="text-sm text-brand-charcoal">All standalone packages require the shirt and trouser measurements marked * below. If you cannot supply them, choose to send a fitted sample set instead.</p>
           <!-- Saved Profile Quick-Fill (if user has saved profiles) -->
           <div v-if="savedProfiles.length > 0" class="bg-brand-cream/80 p-4 border border-brand-border">
-            <label class="text-[10px] uppercase tracking-luxury text-brand-gold font-bold block mb-1">
+            <label for="stitch-profile" class="text-[10px] uppercase tracking-luxury text-brand-gold font-bold block mb-1">
               Load From Your Saved Measurement Profiles
             </label>
             <div class="flex items-center space-x-3">
               <select
+                id="stitch-profile"
                 v-model="selectedSavedProfileId"
                 class="flex-1 bg-white border border-brand-border px-3 py-2 text-xs text-brand-charcoal focus:border-brand-gold focus:outline-none"
                 @change="selectedSavedProfileId && applySavedProfile(selectedSavedProfileId)"
@@ -618,10 +665,12 @@ const finalizeBooking = (proceedToCheckout = false) => {
             </h4>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <label for="stitch-shirt-length" class="text-[10px] uppercase text-brand-muted block mb-1">Shirt Length</label>
+                <label for="stitch-shirt-length" class="text-[10px] uppercase text-brand-muted block mb-1">Shirt Length *</label>
                 <input
                   id="stitch-shirt-length"
                   v-model.number="manualMeasurements.shirt_length"
+                  required
+                  aria-required="true"
                   type="number"
                   min="0.01"
                           max="300"
@@ -631,10 +680,12 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-shoulder" class="text-[10px] uppercase text-brand-muted block mb-1">Shoulder Width</label>
+                <label for="stitch-shoulder" class="text-[10px] uppercase text-brand-muted block mb-1">Shoulder Width *</label>
                 <input
                   id="stitch-shoulder"
                   v-model.number="manualMeasurements.shoulder"
+                  required
+                  aria-required="true"
                   type="number"
                   min="0.01"
                           max="300"
@@ -644,10 +695,12 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-chest" class="text-[10px] uppercase text-brand-muted block mb-1">Chest / Bust</label>
+                <label for="stitch-chest" class="text-[10px] uppercase text-brand-muted block mb-1">Chest / Bust *</label>
                 <input
                   id="stitch-chest"
                   v-model.number="manualMeasurements.chest"
+                  required
+                  aria-required="true"
                   type="number"
                   min="0.01"
                           max="300"
@@ -657,10 +710,12 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-waist" class="text-[10px] uppercase text-brand-muted block mb-1">Waist</label>
+                <label for="stitch-waist" class="text-[10px] uppercase text-brand-muted block mb-1">Waist *</label>
                 <input
                   id="stitch-waist"
                   v-model.number="manualMeasurements.waist"
+                  required
+                  aria-required="true"
                   type="number"
                   min="0.01"
                           max="300"
@@ -670,10 +725,12 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-hips" class="text-[10px] uppercase text-brand-muted block mb-1">Hips</label>
+                <label for="stitch-hips" class="text-[10px] uppercase text-brand-muted block mb-1">Hips *</label>
                 <input
                   id="stitch-hips"
                   v-model.number="manualMeasurements.hips"
+                  required
+                  aria-required="true"
                   type="number"
                   min="0.01"
                           max="300"
@@ -683,10 +740,12 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-sleeve-length" class="text-[10px] uppercase text-brand-muted block mb-1">Sleeve Length</label>
+                <label for="stitch-sleeve-length" class="text-[10px] uppercase text-brand-muted block mb-1">Sleeve Length *</label>
                 <input
                   id="stitch-sleeve-length"
                   v-model.number="manualMeasurements.sleeve_length"
+                  required
+                  aria-required="true"
                   type="number"
                   min="0.01"
                           max="300"
@@ -731,10 +790,12 @@ const finalizeBooking = (proceedToCheckout = false) => {
             </h4>
             <div class="grid grid-cols-3 gap-4">
               <div>
-                <label for="stitch-trouser-length" class="text-[10px] uppercase text-brand-muted block mb-1">Trouser Length</label>
+                <label for="stitch-trouser-length" class="text-[10px] uppercase text-brand-muted block mb-1">Trouser Length *</label>
                 <input
                   id="stitch-trouser-length"
                   v-model.number="manualMeasurements.trouser_length"
+                  required
+                  aria-required="true"
                   type="number"
                   min="0.01"
                           max="300"
@@ -744,10 +805,12 @@ const finalizeBooking = (proceedToCheckout = false) => {
                 >
               </div>
               <div>
-                <label for="stitch-trouser-waist" class="text-[10px] uppercase text-brand-muted block mb-1">Trouser Waist</label>
+                <label for="stitch-trouser-waist" class="text-[10px] uppercase text-brand-muted block mb-1">Trouser Waist *</label>
                 <input
                   id="stitch-trouser-waist"
                   v-model.number="manualMeasurements.trouser_waist"
+                  required
+                  aria-required="true"
                   type="number"
                   min="0.01"
                           max="300"
@@ -784,11 +847,11 @@ const finalizeBooking = (proceedToCheckout = false) => {
             Send a Well-Fitted Sample Suit
           </h3>
           <p class="text-xs text-brand-muted leading-relaxed">
-            No need to measure yourself! Pack an existing dress that fits you impeccably with your unstitched fabric. Our master cutting masters will match every inch, flare, and neckline contour exactly.
+            Pack a well-fitting shirt and trousers with your fabric. The atelier uses both pieces as the fit reference and records their arrival before starting work.
           </p>
           <ul class="text-xs text-brand-charcoal space-y-2 pt-2">
-            <li>✔ Your sample suit is safely tagged with your Order Number and returned undamaged with your stitched dress.</li>
-            <li>✔ We save your measured specifications to your customer profile for all future orders.</li>
+            <li>Include the order number inside the package. Wait for the atelier to confirm its courier address before shipping.</li>
+            <li>The sample garments are returned with your finished order. Measurements are not automatically saved to your account.</li>
           </ul>
         </div>
 
@@ -850,7 +913,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
             <div>
               <span class="text-brand-muted uppercase text-[10px] block">Measurement Method</span>
               <span class="text-brand-charcoal font-medium">
-                {{ measurementMode === 'manual' ? 'Online Custom Form' : 'Physical Sample Suit Included' }}
+                {{ measurementMode === 'manual' ? 'Online Custom Form' : 'Fitted Shirt & Trousers by Courier' }}
               </span>
             </div>
           </div>
@@ -878,7 +941,7 @@ const finalizeBooking = (proceedToCheckout = false) => {
               Advance Payment Policy for Atelier Stitching
             </strong>
             <span>
-              Checkout will show your advance and which payment method is available. Tailoring starts after the atelier verifies the advance and receives your fabric.
+              Checkout will show your advance and which payment method is available. Tailoring starts after the atelier verifies the advance and receives your fabric and any required sample garments.
             </span>
           </div>
         </div>

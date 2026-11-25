@@ -3,6 +3,7 @@ import ProductCard from '~/components/ProductCard.vue'
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase || 'http://localhost:8000/api/v1'
+const heroImage = config.public.heroImage || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=2000&q=85'
 
 // Fetch featured products from Laravel REST API
 const { data: featuredData, pending: productsPending } = await useFetch<any>(`${apiBase}/products?is_featured=true&per_page=4`, {
@@ -42,17 +43,18 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
     <!-- 1. Full-Bleed Hero Banner (85vh) -->
     <section class="relative h-[85vh] min-h-[580px] max-h-[880px] flex items-center justify-center overflow-hidden border-b border-brand-border">
       <!-- High-Fashion Editorial Background Image with Subtle Parallax / Fill -->
-      <img
-        src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=2000&q=85"
-        alt="K. Fabrics Autumn Collection"
+      <ProductImage
+        :src="heroImage"
+        alt=""
+        :width="1600" :height="1000" sizes="100vw" loading="eager" fetchpriority="high"
         class="absolute inset-0 w-full h-full object-cover object-[center_35%] scale-105"
-      >
+      />
       <!-- Luxury Gradient & Dark Tint Overlay for High Text Contrast -->
       <div class="absolute inset-0 bg-gradient-to-t from-brand-charcoal/85 via-brand-charcoal/45 to-brand-charcoal/50" />
 
       <!-- Center Hero Content -->
       <div class="relative z-10 max-w-4xl mx-auto text-center px-4 sm:px-6">
-        <span class="inline-block text-[10px] sm:text-[11px] uppercase tracking-[0.3em] text-brand-gold font-semibold mb-4 drop-shadow-sm">
+        <span class="mb-4 inline-block rounded bg-brand-charcoal/95 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-gold-light sm:text-[11px] sm:tracking-[0.3em]">
           Autumn / Festive Atelier 2026
         </span>
         <h1 class="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-white mb-6 leading-tight drop-shadow-md">
@@ -89,7 +91,7 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
         <h2 class="font-serif text-2xl sm:text-4xl font-bold text-brand-charcoal">
           Shop by Aesthetic
         </h2>
-        <div class="w-12 h-0.5 bg-brand-gold mx-auto mt-4" />
+        <div class="w-12 h-0.5 bg-brand-gold-decoration mx-auto mt-4" />
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -98,11 +100,12 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
           :key="cat.id"
           class="group relative aspect-[3/4] bg-brand-cream overflow-hidden border border-brand-border"
         >
-          <img
+          <ProductImage
             :src="cat.image_url || getCategoryFallbackImage(cat.slug, idx)"
-            :alt="cat.name"
+            alt=""
+            :width="600" :height="800" sizes="sm:90vw md:30vw"
             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-          >
+          />
           <div class="absolute inset-0 bg-gradient-to-t from-brand-charcoal/80 via-brand-charcoal/20 to-transparent" />
           
           <div class="absolute bottom-0 inset-x-0 p-8 text-white text-center flex flex-col items-center">
@@ -111,7 +114,7 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
             </h3>
             <NuxtLink
               :to="`/shop?category=${cat.slug}`"
-              class="inline-block text-[11px] uppercase tracking-luxury border-b border-white/60 pb-1 hover:border-white hover:text-brand-gold transition-colors"
+              class="inline-block text-[11px] uppercase tracking-luxury border-b border-white/60 pb-1 hover:border-white hover:text-white transition-colors"
             >
               Explore Collection →
             </NuxtLink>
@@ -173,15 +176,15 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
           </p>
           <ul class="space-y-3.5 text-xs text-brand-charcoal mb-8">
             <li class="flex items-center space-x-2.5">
-              <span class="w-1.5 h-1.5 bg-brand-gold rounded-full" />
-              <span>Rider Pickup in Lahore, Karachi & Islamabad or Courier Inbound</span>
+              <span class="w-1.5 h-1.5 bg-brand-gold-decoration rounded-full" />
+              <span>Send your fabric by courier after the atelier confirms the address</span>
             </li>
             <li class="flex items-center space-x-2.5">
-              <span class="w-1.5 h-1.5 bg-brand-gold rounded-full" />
-              <span>Submit precise measurements online or send a sample suit</span>
+              <span class="w-1.5 h-1.5 bg-brand-gold-decoration rounded-full" />
+              <span>Enter shirt and trouser measurements online or send a fitted sample set</span>
             </li>
             <li class="flex items-center space-x-2.5">
-              <span class="w-1.5 h-1.5 bg-brand-gold rounded-full" />
+              <span class="w-1.5 h-1.5 bg-brand-gold-decoration rounded-full" />
               <span>Fast 5–7 working days turnaround with doorstep delivery</span>
             </li>
           </ul>
@@ -195,11 +198,12 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
         </div>
 
         <div class="relative aspect-square sm:aspect-[4/3] overflow-hidden border border-brand-border">
-          <img
+          <ProductImage
             src="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1000&q=80"
-            alt="K. Fabrics Custom Tailoring"
+            alt=""
+            :width="800" :height="650" sizes="sm:90vw md:45vw"
             class="w-full h-full object-cover"
-          >
+          />
         </div>
       </div>
     </section>
@@ -214,7 +218,7 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
             </svg>
           </div>
-          <h4 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">Nationwide COD</h4>
+          <h3 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">Nationwide COD</h3>
           <p class="text-xs text-brand-muted max-w-[200px]">Cash on delivery available across all cities and towns in Pakistan.</p>
         </div>
 
@@ -225,7 +229,7 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" />
             </svg>
           </div>
-          <h4 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">Custom Fitting</h4>
+          <h3 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">Custom Fitting</h3>
           <p class="text-xs text-brand-muted max-w-[200px]">Tailored precisely to your body measurements or sample suit.</p>
         </div>
 
@@ -236,7 +240,7 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </div>
-          <h4 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">Quality Check</h4>
+          <h3 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">Quality Check</h3>
           <p class="text-xs text-brand-muted max-w-[200px]">Every stitch, seam, and hem inspected before luxury packaging.</p>
         </div>
 
@@ -247,7 +251,7 @@ const getCategoryFallbackImage = (slug: string, index: number) => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </div>
-          <h4 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">Stylist Assistance</h4>
+          <h3 class="font-serif text-sm font-semibold text-brand-charcoal uppercase tracking-luxury">Stylist Assistance</h3>
           <p class="text-xs text-brand-muted max-w-[200px]">Live WhatsApp styling advice, measurement help & updates.</p>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import type { CartItem, CustomFittingMeasurements } from '../stores/cart'
+import type { OrderReceipt } from './order-receipt'
 
 type Money = number | string
 
@@ -22,7 +23,7 @@ export interface CheckoutQuote {
 
 export interface PlacedOrder {
   order_number: string
-  customer_name: string
+  receipt?: OrderReceipt | null
   tracking_token?: string | null
   payment_method: string
   payment_status: string
@@ -75,6 +76,30 @@ export function hasNumericMeasurements(measurements: CustomFittingMeasurements) 
   return measurementFields.some(field => typeof measurements[field] === 'number' && measurements[field]! > 0)
 }
 
+const shirtMeasurements = {
+  shirt_length: 'shirt length',
+  shoulder: 'shoulder width',
+  chest: 'chest/bust',
+  waist: 'shirt waist',
+  hips: 'hips',
+  sleeve_length: 'sleeve length',
+} as const
+
+const trouserMeasurements = {
+  trouser_length: 'trouser length',
+  trouser_waist: 'trouser waist',
+} as const
+
+export function requiredMeasurementLabels(measurements?: CustomFittingMeasurements | null, includeTrousers = true): string[] {
+  const required = includeTrousers ? { ...shirtMeasurements, ...trouserMeasurements } : shirtMeasurements
+  return Object.entries(required)
+    .filter(([field]) => {
+      const value = measurements?.[field as keyof typeof shirtMeasurements | keyof typeof trouserMeasurements]
+      return typeof value !== 'number' || !Number.isFinite(value) || value <= 0
+    })
+    .map(([, label]) => label)
+}
+
 export function measurementPayload(measurements?: CustomFittingMeasurements | null, includeStyle = false) {
   if (!measurements) return null
   const result: CustomFittingMeasurements = { unit: measurements.unit }
@@ -99,7 +124,7 @@ export function checkoutCart(items: CartItem[], coupon?: string) {
   const unsupported = items.find(item =>
     item.type === 'product'
       ? !item.productId || !item.variantId || item.isAddon || item.addonId || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 20
-      : !item.serviceId || item.quantity !== 1,
+      : !item.serviceId || item.quantity !== 1 || !item.measurementMethod,
   )
   if (unsupported) {
     throw new Error(`Please remove “${unsupported.name}” from your bag or add it again as a supported product or tailoring booking.`)
@@ -120,12 +145,13 @@ export function checkoutCart(items: CartItem[], coupon?: string) {
       })),
       standalone_stitchings: bookings.map(item => ({
         stitching_service_id: item.serviceId!,
-        fabric_delivery_method: item.fabricDeliveryMethod || 'courier_by_customer',
+        fabric_delivery_method: 'courier_by_customer',
+        measurement_method: item.measurementMethod!,
         neck_style: item.neckStyle || null,
         sleeve_style: item.sleeveStyle || null,
         trouser_style: item.trouserStyle || null,
         special_instructions: item.specialInstructions || null,
-        measurements: measurementPayload(item.measurements),
+        measurements: item.measurementMethod === 'manual' ? measurementPayload(item.measurements) : null,
       })),
       ...(coupon ? { coupon_code: coupon } : {}),
     },

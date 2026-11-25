@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { apiError, apiStatus } from '~/utils/api-error'
 import type { OrderTracking } from '~/utils/checkout'
+import type { OrderReceipt } from '~/utils/order-receipt'
 import { useAuthStore } from '~/stores/auth'
 
 const handoff = useTrackingHandoff()
@@ -9,6 +10,7 @@ const route = useRoute()
 const router = useRouter()
 const orderNumber = ref('')
 const trackingToken = ref('')
+const receiptCode = ref('')
 const searching = ref(false)
 const searchError = ref('')
 const result = ref<OrderTracking | null>(null)
@@ -39,6 +41,7 @@ const trackOrder = async () => {
   searching.value = true
   searchError.value = ''
   result.value = null
+  receiptCode.value = ''
   try {
     const response = await auth.apiFetch<{ data: OrderTracking }>('/orders/track', {
       method: 'POST',
@@ -47,7 +50,8 @@ const trackOrder = async () => {
       retry: false,
     })
     result.value = response.data
-    // Do not retain a tracking secret past disclosure of the current result.
+    // Hold the secret only in this mounted page, not in the URL or browser storage.
+    receiptCode.value = supplied.tracking_token
     trackingToken.value = ''
     await nextTick()
     resultTitle.value?.focus()
@@ -58,6 +62,17 @@ const trackOrder = async () => {
   } finally {
     searching.value = false
   }
+}
+
+const loadReceipt = async (): Promise<OrderReceipt> => {
+  if (!result.value || !receiptCode.value) throw new Error('Track the order to access its receipt.')
+  const { data } = await auth.apiFetch<{ data: OrderReceipt }>('/orders/receipt', {
+    method: 'POST',
+    body: { order_number: result.value.order_number, tracking_token: receiptCode.value },
+    headers: { Accept: 'application/json' },
+    retry: false,
+  })
+  return data
 }
 
 onMounted(() => {
@@ -81,7 +96,7 @@ onMounted(() => {
 
       <header class="space-y-2">
         <h1 class="font-serif text-3xl sm:text-4xl font-bold text-brand-charcoal">Track your order</h1>
-        <p>Enter the order number and the private tracking code from your checkout confirmation.</p>
+        <p>Enter the order number and the private tracking code from your checkout confirmation or saved order receipt.</p>
       </header>
 
       <form class="border border-brand-border bg-brand-cream/40 p-5 sm:p-8 space-y-4" @submit.prevent="trackOrder">
@@ -122,6 +137,10 @@ onMounted(() => {
               {{ booking.request_type === 'custom_fitting' ? 'Custom fitting' : 'Standalone stitching' }}: <strong class="capitalize">{{ statusLabel(booking.status) }}</strong>
             </li>
           </ul>
+        </div>
+        <div class="border-t border-brand-border pt-4">
+          <h3 class="mb-2 font-semibold">Order receipt</h3>
+          <OrderReceiptActions v-if="receiptCode" :tracking-code="receiptCode" :load="loadReceipt" />
         </div>
       </section>
       <p>Lost your code? Signed-in customers can see order status in <NuxtLink class="underline" to="/account">their account</NuxtLink>.</p>

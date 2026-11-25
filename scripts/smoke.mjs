@@ -30,6 +30,9 @@ const secondProduct = { ...product, id: 2, slug: 'second-page-product' }
 const endpoints = {
   'GET /api/v1/products': { data: [product], meta: { current_page: 1, last_page: 1, total: 1 } },
   'GET /api/v1/categories': { data: [product.category] },
+  'GET /api/v1/products/facets': {
+    data: { sizes: [{ id: 's', label: 'S' }], fabrics: [], pieces: [], colors: [] },
+  },
   'GET /api/v1/stitching-services': { data: [] },
   [`GET /api/v1/products/${product.slug}`]: { data: product },
   [`GET /api/v1/products/${product.slug}/related`]: { data: [] },
@@ -90,16 +93,18 @@ try {
     const response = await get(path)
     assert.equal(response.status, 200, path)
     const html = await response.text()
-    assert.match(html, /<main(?:>|\s)/, `${path} is rendered on the server`)
+    assert.match(html, /<html[^>]+lang="en-PK"/)
+    assert.equal((html.match(/<main(?:>|\s)/g) || []).length, 1, `${path} has one main landmark`)
+    assert.match(html, /href="#main-content"[^>]*>Skip to main content<\/a>/)
     if (path === '/shop' || path.startsWith('/products/')) assert.match(html, /Smoke Test Lawn Set/)
     if (path === '/shop') {
       const imageLink = html.match(/<a[^>]+aria-label="View Smoke Test Lawn Set"[^>]*>([\s\S]*?)<\/a>/)?.[1]
       assert.ok(imageLink, 'Catalog photo has a named product link')
       assert.ok(!/<button(?:>|\s)/.test(imageLink), 'Quick add and wishlist are not nested in the product link')
       assert.match(html, /aria-label="Add size S to bag"/)
-      const image = html.match(/src="(\/_ipx\/[^"]*product-placeholder\.svg)"/)?.[1]
-      assert.ok(image, 'Catalog should use its built-in optimizer for local images')
-      const optimized = await get(image)
+      assert.match(html, /src="\/images\/product-placeholder\.svg"/, 'Missing photos use the local placeholder directly')
+      assert.equal((await get(placeholder)).status, 200, 'Local image fallback')
+      const optimized = await get('/_ipx/f_webp&w_480/images/product-placeholder.svg')
       assert.equal(optimized.status, 200, 'IPX route')
       assert.match(optimized.headers.get('content-type') || '', /^image\/webp/)
       assert.ok((await optimized.arrayBuffer()).byteLength > 100)

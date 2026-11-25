@@ -2,6 +2,15 @@
 import { useCartStore } from '~/stores/cart'
 
 const cart = useCartStore()
+const { dialog, focusInitial, onCancel, onKeydown } = useStorefrontDialog(
+  () => cart.isOpen, () => cart.closeCart(), '#site-cart-trigger',
+)
+
+const restoreFocusIfRemoved = async (action: () => void) => {
+  action()
+  await nextTick()
+  if (dialog.value?.open && !dialog.value.contains(document.activeElement)) focusInitial()
+}
 
 onMounted(() => {
   cart.initCart()
@@ -21,47 +30,31 @@ const formatPrice = (value: number) => {
 </script>
 
 <template>
-  <div>
-    <!-- Backdrop Overlay -->
-    <Transition
-      enter-active-class="transition-opacity duration-300 ease-out"
-      enter-from-class="opacity-0"
-      enter-to-class="opacity-100"
-      leave-active-class="transition-opacity duration-200 ease-in"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
+  <Teleport to="body">
+    <dialog
+      id="shopping-bag-dialog"
+      ref="dialog"
+      aria-labelledby="shopping-bag-title"
+      aria-modal="true"
+      class="storefront-dialog storefront-dialog--right fixed inset-y-0 left-auto right-0 m-0 h-[100dvh] max-h-none w-full max-w-md border-l border-brand-border bg-brand-white p-0 text-brand-charcoal shadow-2xl"
+      @cancel="onCancel"
+      @keydown="onKeydown"
+      @click.self="cart.closeCart()"
     >
-      <div
-        v-if="cart.isOpen"
-        class="fixed inset-0 bg-brand-charcoal/50 backdrop-blur-sm z-50"
-        @click="cart.closeCart()"
-      />
-    </Transition>
-
-    <!-- Slide-Over Panel -->
-    <Transition
-      enter-active-class="transform transition duration-300 ease-out"
-      enter-from-class="translate-x-full"
-      enter-to-class="translate-x-0"
-      leave-active-class="transform transition duration-200 ease-in"
-      leave-from-class="translate-x-0"
-      leave-to-class="translate-x-full"
-    >
-      <div
-        v-if="cart.isOpen"
-        class="fixed top-0 right-0 bottom-0 w-full max-w-md bg-brand-white z-50 shadow-2xl flex flex-col border-l border-brand-border"
-      >
+      <div v-if="cart.isOpen" class="flex h-full min-h-0 flex-col">
         <!-- Drawer Header -->
-        <div class="p-6 border-b border-brand-border flex items-center justify-between">
+        <div class="flex shrink-0 items-center justify-between border-b border-brand-border p-4 sm:p-6">
           <div class="flex items-center space-x-2">
-            <h2 class="font-serif text-lg tracking-luxury uppercase text-brand-charcoal">
+            <h2 id="shopping-bag-title" class="font-serif text-lg tracking-luxury uppercase text-brand-charcoal">
               Shopping Bag
             </h2>
-            <span class="text-xs font-medium text-brand-muted">({{ cart.totalItems }})</span>
+            <span class="text-xs font-medium text-brand-muted" aria-live="polite">({{ cart.totalItems }})</span>
           </div>
           <button
-            class="text-brand-charcoal hover:text-brand-gold transition-colors p-1"
+            type="button"
+            class="text-brand-charcoal hover:text-brand-gold transition-colors p-2"
             aria-label="Close bag"
+            data-dialog-initial-focus
             @click="cart.closeCart()"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,7 +64,7 @@ const formatPrice = (value: number) => {
         </div>
 
         <!-- Free Delivery Threshold Bar -->
-        <div class="px-6 py-3 bg-brand-cream border-b border-brand-border text-xs">
+        <div class="shrink-0 border-b border-brand-border bg-brand-cream px-4 py-3 text-xs sm:px-6">
           <div v-if="remainingForFreeShipping > 0" class="text-brand-muted">
             Add <span class="font-semibold text-brand-charcoal">{{ formatPrice(remainingForFreeShipping) }}</span> more for <span class="text-brand-gold font-medium">Free Delivery</span>
           </div>
@@ -83,16 +76,16 @@ const formatPrice = (value: number) => {
           </div>
           <div class="w-full bg-brand-border h-1 mt-2 overflow-hidden">
             <div
-              class="bg-brand-gold h-full transition-all duration-300"
+              class="bg-brand-gold-decoration h-full transition-all duration-300"
               :style="{ width: `${progressPercent}%` }"
             />
           </div>
         </div>
 
         <!-- Cart Items List -->
-        <div class="flex-1 overflow-y-auto p-6 divide-y divide-brand-border">
+        <div class="min-h-0 flex-1 divide-y divide-brand-border overflow-y-auto overscroll-contain p-4 sm:p-6">
           <!-- Empty State -->
-          <div v-if="cart.items.length === 0" class="h-full flex flex-col items-center justify-center text-center py-12">
+          <div v-if="cart.items.length === 0" class="flex min-h-full flex-col items-center justify-center py-6 text-center sm:py-12">
             <div class="w-16 h-16 mb-4 text-brand-muted/40">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-full h-full">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -113,10 +106,10 @@ const formatPrice = (value: number) => {
           <div
             v-for="item in cart.items"
             :key="item.id"
-            class="py-4 first:pt-0 last:pb-0 flex space-x-4"
+            class="flex gap-3 py-4 first:pt-0 last:pb-0 sm:gap-4"
           >
             <!-- Thumbnail -->
-            <div class="w-20 h-28 bg-brand-cream border border-brand-border overflow-hidden shrink-0 relative">
+            <div class="h-24 w-16 sm:h-28 sm:w-20 bg-brand-cream border border-brand-border overflow-hidden shrink-0 relative">
               <img
                 v-if="item.image || item.designReferenceImage"
                 :src="item.image || item.designReferenceImage || ''"
@@ -131,16 +124,17 @@ const formatPrice = (value: number) => {
             </div>
 
             <!-- Details -->
-            <div class="flex-1 flex flex-col justify-between">
+            <div class="flex min-w-0 flex-1 flex-col justify-between">
               <div>
                 <div class="flex items-start justify-between">
                   <h3 class="font-serif text-sm font-medium text-brand-charcoal line-clamp-1">
                     {{ item.name }}
                   </h3>
                   <button
-                    class="text-brand-muted hover:text-red-600 transition-colors ml-2"
-                    title="Remove item"
-                    @click="cart.removeItem(item.id)"
+                    type="button"
+                    class="ml-0.5 shrink-0 p-1.5 text-brand-muted transition-colors hover:text-red-700"
+                    :aria-label="`Remove ${item.name} from your bag`"
+                    @click="restoreFocusIfRemoved(() => cart.removeItem(item.id))"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -167,13 +161,14 @@ const formatPrice = (value: number) => {
               </div>
 
               <!-- Price & Quantity -->
-              <div class="flex items-center justify-between mt-3">
+              <div class="mt-3 flex flex-wrap items-center justify-between gap-1">
                 <!-- Quantity Controls for Ready-to-Wear -->
                 <div v-if="item.type === 'product' && !item.customFitting" class="flex items-center border border-brand-border">
                   <button
-                    class="px-2 py-1 text-xs text-brand-charcoal hover:bg-brand-cream transition-colors"
+                    type="button"
+                    class="min-h-7 min-w-7 px-2 py-1 text-xs text-brand-charcoal hover:bg-brand-cream transition-colors"
                     :aria-label="`Decrease quantity of ${item.name}`"
-                    @click="cart.updateQuantity(item.id, -1)"
+                    @click="restoreFocusIfRemoved(() => cart.updateQuantity(item.id, -1))"
                   >
                     -
                   </button>
@@ -181,7 +176,8 @@ const formatPrice = (value: number) => {
                     {{ item.quantity }}
                   </span>
                   <button
-                    class="px-2 py-1 text-xs text-brand-charcoal hover:bg-brand-cream transition-colors"
+                    type="button"
+                    class="min-h-7 min-w-7 px-2 py-1 text-xs text-brand-charcoal hover:bg-brand-cream transition-colors"
                     :aria-label="`Increase quantity of ${item.name}`"
                     @click="cart.updateQuantity(item.id, 1)"
                   >
@@ -204,7 +200,7 @@ const formatPrice = (value: number) => {
         </div>
 
         <!-- Drawer Footer -->
-        <div v-if="cart.items.length > 0" class="p-6 border-t border-brand-border bg-brand-white space-y-4">
+        <div v-if="cart.items.length > 0" class="max-h-[45dvh] shrink-0 space-y-3 overflow-y-auto border-t border-brand-border bg-brand-white p-4 sm:space-y-4 sm:p-6">
           <!-- Tailoring 50% Advance Notice -->
           <div
             v-if="cart.hasTailoring"
@@ -241,6 +237,7 @@ const formatPrice = (value: number) => {
               Proceed to Checkout
             </NuxtLink>
             <button
+              type="button"
               class="block w-full text-center text-xs text-brand-muted hover:text-brand-charcoal underline underline-offset-4 py-1"
               @click="cart.closeCart()"
             >
@@ -249,6 +246,6 @@ const formatPrice = (value: number) => {
           </div>
         </div>
       </div>
-    </Transition>
-  </div>
+    </dialog>
+  </Teleport>
 </template>
